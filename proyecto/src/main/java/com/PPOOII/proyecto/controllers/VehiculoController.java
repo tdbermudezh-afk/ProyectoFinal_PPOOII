@@ -1,8 +1,10 @@
 package com.PPOOII.proyecto.controllers;
 
 import com.PPOOII.proyecto.entities.Vehiculo;
+import com.PPOOII.proyecto.entities.VehiculoDocumento;
 import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 import com.PPOOII.proyecto.services.VehiculoService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,11 +32,11 @@ public class VehiculoController {
         return ResponseEntity.ok(vehiculo);
     }
 
-   @GetMapping("/placa/{placa}")
+    @GetMapping("/placa/{placa}")
     public ResponseEntity<Vehiculo> buscarPorPlaca(@PathVariable String placa) {
-    Vehiculo vehiculo = vehiculoService.buscarPorPlaca(placa)
-            .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con la placa: " + placa));
-    return ResponseEntity.ok(vehiculo);
+        return vehiculoService.buscarPorPlaca(placa)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/tipo/{tipoVehiculo}")
@@ -53,7 +55,7 @@ public class VehiculoController {
     }
 
     @PostMapping
-    public Vehiculo crear(@RequestBody Vehiculo vehiculo) {
+    public Vehiculo crear(@Valid @RequestBody Vehiculo vehiculo) {
         return vehiculoService.guardar(vehiculo);
     }
 
@@ -66,10 +68,11 @@ public class VehiculoController {
     @PostMapping("/{id}/documentos")
     public ResponseEntity<Vehiculo> agregarDocumento(
         @PathVariable int id, 
-        @RequestBody com.PPOOII.proyecto.entities.VehiculoDocumento documento) {
+        @RequestBody VehiculoDocumento documento) {
     
-    Vehiculo vehiculo = vehiculoService.agregarDocumentoAVehiculo(id, documento)
-            .orElseThrow(() -> new ResourceNotFoundException("No se pudo agregar el documento al vehículo ID: " + id));
-    return ResponseEntity.ok(vehiculo);
+    Vehiculo vehiculoActualizado = vehiculoService.agregarDocumentoAVehiculo(id, documento)
+            .orElseThrow(() -> new ResourceNotFoundException("Vehiculo no encontrado con id: " + id));
+            
+    return ResponseEntity.ok(vehiculoActualizado);
     }
 }
