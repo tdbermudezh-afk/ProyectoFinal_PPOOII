@@ -1,6 +1,8 @@
 package com.PPOOII.proyecto.controllers;
 
 import com.PPOOII.proyecto.entities.Vehiculo;
+import com.PPOOII.proyecto.entities.VehiculoDocumento;
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 import com.PPOOII.proyecto.services.VehiculoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,16 +27,15 @@ public class VehiculoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Vehiculo> buscarPorId(@PathVariable int id) {
-        return vehiculoService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Vehiculo vehiculo = vehiculoService.buscarPorId(id);
+        return ResponseEntity.ok(vehiculo);
     }
 
-    @GetMapping("/placa/{placa}")
+   @GetMapping("/placa/{placa}")
     public ResponseEntity<Vehiculo> buscarPorPlaca(@PathVariable String placa) {
-        return vehiculoService.buscarPorPlaca(placa)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    Vehiculo vehiculo = vehiculoService.buscarPorPlaca(placa)
+            .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con la placa: " + placa));
+    return ResponseEntity.ok(vehiculo);
     }
 
     @GetMapping("/tipo/{tipoVehiculo}")
@@ -57,22 +58,19 @@ public class VehiculoController {
         return vehiculoService.guardar(vehiculo);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Vehiculo> actualizar(@PathVariable int id, @RequestBody Vehiculo vehiculo) {
-        return vehiculoService.actualizar(id, vehiculo)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable int id) {
         vehiculoService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/{id}/documentos")
-    public ResponseEntity<Vehiculo> agregarDocumento(@PathVariable int id, @RequestBody com.PPOOII.proyecto.entities.VehiculoDocumento documento) {
-    return vehiculoService.agregarDocumentoAVehiculo(id, documento)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-}
+    public ResponseEntity<Vehiculo> agregarDocumento(
+        @PathVariable int id, 
+        @RequestBody com.PPOOII.proyecto.entities.VehiculoDocumento documento) {
+    
+    Vehiculo vehiculo = vehiculoService.agregarDocumentoAVehiculo(id, documento)
+            .orElseThrow(() -> new ResourceNotFoundException("No se pudo agregar el documento al vehículo ID: " + id));
+    return ResponseEntity.ok(vehiculo);
+    }
 }

@@ -2,6 +2,7 @@ package com.PPOOII.proyecto.services;
 
 import com.PPOOII.proyecto.entities.Vehiculo;
 import com.PPOOII.proyecto.entities.VehiculoDocumento;
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 import com.PPOOII.proyecto.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +22,9 @@ public class VehiculoService {
         return vehiculoRepository.findAll();
     }
 
-    public Optional<Vehiculo> buscarPorId(int id) {
-        return vehiculoRepository.findById(id);
+    public Vehiculo buscarPorId(int id) {
+    return vehiculoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con el ID: " + id));
     }
 
     public Optional<Vehiculo> buscarPorPlaca(String placa) {
