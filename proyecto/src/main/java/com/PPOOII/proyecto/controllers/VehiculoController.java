@@ -1,7 +1,6 @@
 package com.PPOOII.proyecto.controllers;
 
 import com.PPOOII.proyecto.entities.Vehiculo;
-import com.PPOOII.proyecto.entities.VehiculoDocumento;
 import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 import com.PPOOII.proyecto.services.VehiculoService;
 import org.springframework.http.ResponseEntity;

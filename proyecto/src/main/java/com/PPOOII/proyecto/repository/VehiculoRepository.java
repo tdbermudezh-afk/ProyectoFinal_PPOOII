@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface VehiculoRepository extends JpaRepository<Vehiculo, Integer> {
 
     // 1. Buscar vehículo por número de placa
