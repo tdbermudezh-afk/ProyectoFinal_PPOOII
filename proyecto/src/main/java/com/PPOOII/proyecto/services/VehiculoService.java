@@ -68,4 +68,17 @@ public class VehiculoService {
     public void eliminar(int id) {
         vehiculoRepository.deleteById(id);
     }
+    public Optional<Vehiculo> agregarDocumentoAVehiculo(int vehiculoId, VehiculoDocumento nuevoDocumento) {
+    return vehiculoRepository.findById(vehiculoId).map(vehiculo -> {
+        nuevoDocumento.setVehiculo(vehiculo);
+        
+        // Asignar el estado por defecto si no viene especificado
+        if (nuevoDocumento.getEstado() == null || nuevoDocumento.getEstado().trim().isEmpty()) {
+            nuevoDocumento.setEstado("En Verificación");
+        }
+        
+        vehiculo.getDocumentos().add(nuevoDocumento);
+        return vehiculoRepository.save(vehiculo);
+    });
+}
 }

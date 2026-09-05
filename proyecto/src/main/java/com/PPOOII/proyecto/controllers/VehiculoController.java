@@ -69,4 +69,10 @@ public class VehiculoController {
         vehiculoService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+    @PostMapping("/{id}/documentos")
+    public ResponseEntity<Vehiculo> agregarDocumento(@PathVariable int id, @RequestBody com.PPOOII.proyecto.entities.VehiculoDocumento documento) {
+    return vehiculoService.agregarDocumentoAVehiculo(id, documento)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+}
 }
