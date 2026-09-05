@@ -1,6 +1,7 @@
 package com.PPOOII.proyecto.entities;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "documento")
@@ -24,6 +25,9 @@ public class Documento {
 
     @Column(columnDefinition = "TEXT")
     private String descripcion;
+
+    @NotBlank(message = "El nombre del documento no puede estar vacío")
+    private String nombre1;
 
     public Documento() {}
 
