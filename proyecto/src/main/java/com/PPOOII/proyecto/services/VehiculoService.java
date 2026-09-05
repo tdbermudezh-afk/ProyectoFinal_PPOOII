@@ -3,7 +3,6 @@ package com.PPOOII.proyecto.services;
 import com.PPOOII.proyecto.entities.Vehiculo;
 import com.PPOOII.proyecto.entities.VehiculoDocumento;
 import com.PPOOII.proyecto.repository.VehiculoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,8 +11,11 @@ import java.util.Optional;
 @Service
 public class VehiculoService {
 
-    @Autowired
-    private VehiculoRepository vehiculoRepository;
+    private final VehiculoRepository vehiculoRepository;
+
+    public VehiculoService(VehiculoRepository vehiculoRepository) {
+        this.vehiculoRepository = vehiculoRepository;
+    }
 
     public List<Vehiculo> listarTodos() {
         return vehiculoRepository.findAll();
@@ -40,13 +42,27 @@ public class VehiculoService {
     }
 
     public Vehiculo guardar(Vehiculo vehiculo) {
-        // Asignar la referencia del vehículo a cada documento asociado antes de guardar
         if (vehiculo.getDocumentos() != null) {
             for (VehiculoDocumento doc : vehiculo.getDocumentos()) {
                 doc.setVehiculo(vehiculo);
             }
         }
         return vehiculoRepository.save(vehiculo);
+    }
+
+    public Optional<Vehiculo> actualizar(int id, Vehiculo vehiculoDetalles) {
+        return vehiculoRepository.findById(id).map(vehiculo -> {
+            vehiculo.setPlaca(vehiculoDetalles.getPlaca());
+            vehiculo.setTipoVehiculo(vehiculoDetalles.getTipoVehiculo());
+            vehiculo.setTipoServicio(vehiculoDetalles.getTipoServicio());
+            vehiculo.setTipoCombustible(vehiculoDetalles.getTipoCombustible());
+            vehiculo.setCapacidadPasajeros(vehiculoDetalles.getCapacidadPasajeros());
+            vehiculo.setColor(vehiculoDetalles.getColor());
+            vehiculo.setModelo(vehiculoDetalles.getModelo());
+            vehiculo.setMarca(vehiculoDetalles.getMarca());
+            vehiculo.setLinea(vehiculoDetalles.getLinea());
+            return vehiculoRepository.save(vehiculo);
+        });
     }
 
     public void eliminar(int id) {

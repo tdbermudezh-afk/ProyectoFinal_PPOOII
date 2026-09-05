@@ -2,7 +2,6 @@ package com.PPOOII.proyecto.controllers;
 
 import com.PPOOII.proyecto.entities.Vehiculo;
 import com.PPOOII.proyecto.services.VehiculoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,8 +12,11 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class VehiculoController {
 
-    @Autowired
-    private VehiculoService vehiculoService;
+    private final VehiculoService vehiculoService;
+
+    public VehiculoController(VehiculoService vehiculoService) {
+        this.vehiculoService = vehiculoService;
+    }
 
     @GetMapping
     public List<Vehiculo> listarTodos() {
@@ -53,6 +55,13 @@ public class VehiculoController {
     @PostMapping
     public Vehiculo crear(@RequestBody Vehiculo vehiculo) {
         return vehiculoService.guardar(vehiculo);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Vehiculo> actualizar(@PathVariable int id, @RequestBody Vehiculo vehiculo) {
+        return vehiculoService.actualizar(id, vehiculo)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
