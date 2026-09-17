@@ -9,10 +9,14 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface VehiculoRepository extends JpaRepository<Vehiculo, Integer> {
 
     // 1. Buscar vehículo por número de placa
     Optional<Vehiculo> findByPlaca(String placa);
+
+    // Validar si ya existe la placa
+    boolean existsByPlaca(String placa);
 
     // 2. Buscar vehículos por tipo de vehículo (Automóvil / Motocicleta)
     List<Vehiculo> findByTipoVehiculo(String tipoVehiculo);

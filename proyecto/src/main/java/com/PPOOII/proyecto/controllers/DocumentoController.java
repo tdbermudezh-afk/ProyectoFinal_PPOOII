@@ -57,6 +57,19 @@ public class DocumentoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
+    @Operation(summary = "Actualizar documento", description = "Actualiza la información de un documento parametrizado según su ID")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Documento actualizado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
+        @ApiResponse(responseCode = "404", description = "Documento no encontrado")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<Documento> actualizar(@PathVariable int id, @Valid @RequestBody Documento documento) {
+        Documento documentoActualizado = documentoService.actualizar(id, documento)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento no encontrado con el ID: " + id));
+        return ResponseEntity.ok(documentoActualizado);
+    }
+
     @Operation(summary = "Eliminar documento", description = "Elimina un registro de documento según su ID")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Documento eliminado exitosamente"),
@@ -64,7 +77,10 @@ public class DocumentoController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable int id) {
-        documentoService.eliminar(id);
+        boolean eliminado = documentoService.eliminar(id);
+        if (!eliminado) {
+            throw new ResourceNotFoundException("Documento no encontrado con el ID: " + id);
+        }
         return ResponseEntity.noContent().build();
     }
 }

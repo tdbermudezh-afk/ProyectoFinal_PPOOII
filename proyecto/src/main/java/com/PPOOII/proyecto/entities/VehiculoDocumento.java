@@ -2,6 +2,9 @@ package com.PPOOII.proyecto.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
 
 @Entity
@@ -17,16 +20,21 @@ public class VehiculoDocumento {
     @JsonBackReference
     private Vehiculo vehiculo;
 
+    @NotNull(message = "El documento referenciado no puede ser nulo")
     @ManyToOne
     @JoinColumn(name = "documento_id", nullable = false)
     private Documento documento;
 
+    @NotNull(message = "La fecha de expedición no puede ser nula")
     @Column(name = "fecha_expedicion", nullable = false)
     private LocalDate fechaExpedicion;
 
+    @NotNull(message = "La fecha de vencimiento no puede ser nula")
     @Column(name = "fecha_vencimiento", nullable = false)
     private LocalDate fechaVencimiento;
 
+    @NotBlank(message = "El estado no puede estar vacío")
+    @Pattern(regexp = "^(Habilitado|Vencido|En Verificación)$", message = "El estado del documento debe ser 'Habilitado', 'Vencido' o 'En Verificación'")
     @Column(nullable = false, length = 20)
     private String estado = "En Verificación";
 

@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface DocumentoRepository extends JpaRepository<Documento, Integer> {
+    boolean existsByCodigo(String codigo);
+    java.util.Optional<Documento> findByCodigo(String codigo);
 }

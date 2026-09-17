@@ -16,29 +16,54 @@ public class DocumentoService {
         this.documentoRepository = documentoRepository;
     }
 
+    // Listar todos los tipos de documentos parametrizados
     public List<Documento> listarTodos() {
         return documentoRepository.findAll();
     }
 
+    // Buscar documento parametrizado por ID
     public Optional<Documento> buscarPorId(int id) {
         return documentoRepository.findById(id);
     }
 
+    // Guardar nuevo documento parametrizado verificando código único
     public Documento guardar(Documento documento) {
+        if (documentoRepository.existsByCodigo(documento.getCodigo())) {
+            throw new IllegalArgumentException("Ya existe un documento parametrizado con el código: " + documento.getCodigo());
+        }
         return documentoRepository.save(documento);
     }
 
+    // Actualizar documento parametrizado existente
     public Optional<Documento> actualizar(int id, Documento documentoDetalles) {
         return documentoRepository.findById(id).map(documentoExistente -> {
-            documentoExistente.setCodigo(documentoDetalles.getCodigo());
-            documentoExistente.setNombre(documentoDetalles.getNombre());
-            documentoExistente.setAplicaA(documentoDetalles.getAplicaA());
-            documentoExistente.setObligatorio(documentoDetalles.getObligatorio());
-            documentoExistente.setDescripcion(documentoDetalles.getDescripcion());
+            // Validar unicidad si se actualiza el código
+            if (documentoDetalles.getCodigo() != null
+                    && !documentoDetalles.getCodigo().equalsIgnoreCase(documentoExistente.getCodigo())
+                    && documentoRepository.existsByCodigo(documentoDetalles.getCodigo())) {
+                throw new IllegalArgumentException("Ya existe un documento parametrizado con el código: " + documentoDetalles.getCodigo());
+            }
+
+            if (documentoDetalles.getCodigo() != null) {
+                documentoExistente.setCodigo(documentoDetalles.getCodigo());
+            }
+            if (documentoDetalles.getNombre() != null) {
+                documentoExistente.setNombre(documentoDetalles.getNombre());
+            }
+            if (documentoDetalles.getAplicaA() != null) {
+                documentoExistente.setAplicaA(documentoDetalles.getAplicaA());
+            }
+            if (documentoDetalles.getObligatorio() != null) {
+                documentoExistente.setObligatorio(documentoDetalles.getObligatorio());
+            }
+            if (documentoDetalles.getDescripcion() != null) {
+                documentoExistente.setDescripcion(documentoDetalles.getDescripcion());
+            }
             return documentoRepository.save(documentoExistente);
         });
     }
 
+    // Eliminar documento parametrizado
     public boolean eliminar(int id) {
         return documentoRepository.findById(id).map(documento -> {
             documentoRepository.delete(documento);

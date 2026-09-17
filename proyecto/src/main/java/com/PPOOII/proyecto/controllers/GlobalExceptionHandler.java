@@ -46,15 +46,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-    String errores = ex.getBindingResult().getFieldErrors().stream()
-            .map(error -> error.getField() + ": " + error.getDefaultMessage())
-            .collect(Collectors.joining(", "));
+        String errores = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
 
         ErrorResponse errorResponse = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
-            "Error de validacion: " + errores
-         );
+                HttpStatus.BAD_REQUEST.value(),
+                "Error de validación: " + errores
+        );
 
-         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-}
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    // Manejo de excepciones por reglas de negocio o argumentos inválidos
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
 }

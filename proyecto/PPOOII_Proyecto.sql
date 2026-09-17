@@ -146,11 +146,21 @@ ALTER TABLE `vehiculo_documento`
 --
 
 --
--- Filtros para la tabla `vehiculo_documento`
+-- Filtros y restricciones para las tablas
 --
+ALTER TABLE `documento`
+  ADD CONSTRAINT `chk_documento_aplica_a` CHECK (`aplica_a` IN ('A', 'M', 'AM')),
+  ADD CONSTRAINT `chk_documento_obligatorio` CHECK (`obligatorio` IN ('RA', 'RM', 'RR'));
+
+ALTER TABLE `vehiculo`
+  ADD CONSTRAINT `chk_vehiculo_tipo` CHECK (`tipo_vehiculo` IN ('Automóvil', 'Motocicleta')),
+  ADD CONSTRAINT `chk_vehiculo_servicio` CHECK (`tipo_servicio` IN ('Pu', 'Pr')),
+  ADD CONSTRAINT `chk_vehiculo_combustible` CHECK (`tipo_combustible` IN ('Gasolina', 'Gas', 'Disel', 'Diesel'));
+
 ALTER TABLE `vehiculo_documento`
   ADD CONSTRAINT `vehiculo_documento_ibfk_1` FOREIGN KEY (`vehiculo_id`) REFERENCES `vehiculo` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `vehiculo_documento_ibfk_2` FOREIGN KEY (`documento_id`) REFERENCES `documento` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `vehiculo_documento_ibfk_2` FOREIGN KEY (`documento_id`) REFERENCES `documento` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `chk_vehiculo_doc_estado` CHECK (`estado` IN ('Habilitado', 'Vencido', 'En Verificación'));
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
