@@ -30,6 +30,10 @@ public class VehiculoDocumento {
     @Column(nullable = false, length = 20)
     private String estado = "En Verificación";
 
+    @Lob
+    @Column(name = "documento_pdf_base64", columnDefinition = "LONGTEXT")
+    private String documentoPdfBase64;
+
     public VehiculoDocumento() {}
 
     public int getId() { return id; }
@@ -49,4 +53,12 @@ public class VehiculoDocumento {
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public String getDocumentoPdfBase64() {
+        return documentoPdfBase64;
+    }
+
+    public void setDocumentoPdfBase64(String documentoPdfBase64) {
+        this.documentoPdfBase64 = documentoPdfBase64;
+    }
 }
