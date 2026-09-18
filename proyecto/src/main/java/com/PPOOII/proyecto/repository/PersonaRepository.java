@@ -17,4 +17,7 @@ public interface PersonaRepository extends JpaRepository<Persona, Long> {
     boolean existsByIdentificacion(String identificacion);
 
     boolean existsByCorreo(String correo);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p.tipoPersona, COUNT(p) FROM Persona p GROUP BY p.tipoPersona")
+    java.util.List<Object[]> countPersonasByTipo();
 }

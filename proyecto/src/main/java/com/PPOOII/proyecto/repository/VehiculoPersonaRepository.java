@@ -14,4 +14,7 @@ public interface VehiculoPersonaRepository extends JpaRepository<VehiculoPersona
     List<VehiculoPersona> findByVehiculoId(Long vehiculoId);
 
     List<VehiculoPersona> findByEstadoConductor(String estadoConductor);
+
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT vp.persona FROM VehiculoPersona vp WHERE vp.estadoConductor = 'PO'")
+    java.util.List<com.PPOOII.proyecto.entities.Persona> findConductoresQuePuedenOperar();
 }
