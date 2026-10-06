@@ -23,7 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/personas/**",  // Para poder registrar nuevas personas/administradores
                         "/swagger-ui/**",    // Para poder ver la documentación
                         "/v3/api-docs/**",    // Archivos internos de Swagger
-                        "/api/public/**"   // Para poder acceder a los servicios públicos sin autenticación
+                        "/api/public/**",    // Para poder acceder a los servicios públicos sin autenticación
+                        "/api/publico/**"    // Variante pública adicional
                 );
     }
 }

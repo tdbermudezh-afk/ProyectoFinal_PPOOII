@@ -37,4 +37,10 @@ public class PersonaController {
     public ResponseEntity<List<Persona>> listarPorTipo(@PathVariable String tipoPersona) {
         return ResponseEntity.ok(personaService.listarPorTipo(tipoPersona));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Persona> actualizarPersona(@PathVariable Long id, @Valid @RequestBody Persona persona) {
+        Persona personaActualizada = personaService.actualizarPersona(id, persona);
+        return ResponseEntity.ok(personaActualizada);
+    }
 }

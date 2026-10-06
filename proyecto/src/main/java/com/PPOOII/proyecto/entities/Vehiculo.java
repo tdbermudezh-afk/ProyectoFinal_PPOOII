@@ -76,6 +76,10 @@ public class Vehiculo {
     @OneToMany(mappedBy = "vehiculo", cascade = CascadeType.ALL)
     private List<VehiculoDocumento> documentos;
 
+    // Relación uno a muchos con la tabla intermedia 'vehiculo_personas' (conductores asignados)
+    @OneToMany(mappedBy = "vehiculo", cascade = CascadeType.ALL)
+    private List<VehiculoPersona> conductores;
+
     // Constructor vacío por defecto requerido por JPA
     public Vehiculo() {
     }
@@ -113,4 +117,7 @@ public class Vehiculo {
 
     public List<VehiculoDocumento> getDocumentos() { return documentos; }
     public void setDocumentos(List<VehiculoDocumento> documentos) { this.documentos = documentos; }
+
+    public List<VehiculoPersona> getConductores() { return conductores; }
+    public void setConductores(List<VehiculoPersona> conductores) { this.conductores = conductores; }
 }

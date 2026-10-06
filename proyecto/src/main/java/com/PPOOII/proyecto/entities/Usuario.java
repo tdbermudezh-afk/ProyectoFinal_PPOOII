@@ -12,6 +12,7 @@ public class Usuario {
     @MapsId("idPersona")
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idpersona", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Persona persona;
 
     @Column(nullable = false)

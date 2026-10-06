@@ -35,13 +35,14 @@ public class PersonaService {
 
         // Regla: Si la persona es de tipo ADMINISTRATIVO ('A'), se genera automáticamente su Usuario
         if ("A".equalsIgnoreCase(persona.getTipoPersona())) {
-            generarUsuarioParaAdministrativo(personaGuardada);
+            Usuario usuario = generarUsuarioParaAdministrativo(personaGuardada);
+            personaGuardada.setUsuarioGenerado(usuario);
         }
 
         return personaGuardada;
     }
 
-    private void generarUsuarioParaAdministrativo(Persona persona) {
+    private Usuario generarUsuarioParaAdministrativo(Persona persona) {
         // Nemotecnia: Primera letra del nombre + primera letra del apellido + identificación
         String primeraLetraNombre = persona.getNombres().trim().substring(0, 1).toLowerCase();
         String primeraLetraApellido = persona.getApellidos().trim().substring(0, 1).toLowerCase();
@@ -59,7 +60,43 @@ public class PersonaService {
         usuario.setPassword(passwordGenerado);
         usuario.setApikey(apiKeyGenerada);
 
-        usuarioRepository.save(usuario);
+        return usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public Persona actualizarPersona(Long id, Persona detalles) {
+        Persona persona = obtenerPorId(id);
+
+        if (detalles.getIdentificacion() != null && !detalles.getIdentificacion().equals(persona.getIdentificacion())) {
+            if (personaRepository.existsByIdentificacion(detalles.getIdentificacion())) {
+                throw new IllegalArgumentException("Ya existe una persona registrada con la identificación: " + detalles.getIdentificacion());
+            }
+            persona.setIdentificacion(detalles.getIdentificacion());
+        }
+
+        if (detalles.getCorreo() != null && !detalles.getCorreo().equalsIgnoreCase(persona.getCorreo())) {
+            if (personaRepository.existsByCorreo(detalles.getCorreo())) {
+                throw new IllegalArgumentException("Ya existe una persona registrada con el correo: " + detalles.getCorreo());
+            }
+            persona.setCorreo(detalles.getCorreo());
+        }
+
+        if (detalles.getNombres() != null) persona.setNombres(detalles.getNombres());
+        if (detalles.getApellidos() != null) persona.setApellidos(detalles.getApellidos());
+        if (detalles.getTipoIdentificacion() != null) persona.setTipoIdentificacion(detalles.getTipoIdentificacion());
+
+        // Si cambia a administrativo, generar usuario si aún no tiene
+        if ("A".equalsIgnoreCase(detalles.getTipoPersona()) && !"A".equalsIgnoreCase(persona.getTipoPersona())) {
+            persona.setTipoPersona("A");
+            Persona personaActualizada = personaRepository.save(persona);
+            Usuario usuario = generarUsuarioParaAdministrativo(personaActualizada);
+            personaActualizada.setUsuarioGenerado(usuario);
+            return personaActualizada;
+        } else if (detalles.getTipoPersona() != null) {
+            persona.setTipoPersona(detalles.getTipoPersona());
+        }
+
+        return personaRepository.save(persona);
     }
 
     public List<Persona> listarTodas() {

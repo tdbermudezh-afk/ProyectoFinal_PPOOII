@@ -38,6 +38,9 @@ public class Persona {
     @Column(name = "tipo_persona", nullable = false, length = 1)
     private String tipoPersona;
 
+    @Transient
+    private Usuario usuarioGenerado;
+
     public Persona() {}
 
     // Getters y Setters
@@ -61,4 +64,7 @@ public class Persona {
 
     public String getTipoPersona() { return tipoPersona; }
     public void setTipoPersona(String tipoPersona) { this.tipoPersona = tipoPersona; }
+
+    public Usuario getUsuarioGenerado() { return usuarioGenerado; }
+    public void setUsuarioGenerado(Usuario usuarioGenerado) { this.usuarioGenerado = usuarioGenerado; }
 }

@@ -83,6 +83,18 @@ public class VehiculoService {
         }
     }
 
+    // Validación de compatibilidad entre el documento y el tipo de vehículo
+    private void validarCompatibilidadDocumento(String tipoVehiculo, Documento docParam) {
+        if (tipoVehiculo == null || docParam == null || docParam.getAplicaA() == null) return;
+        String aplica = docParam.getAplicaA().trim().toUpperCase();
+        if ("Automóvil".equalsIgnoreCase(tipoVehiculo) && "M".equals(aplica)) {
+            throw new IllegalArgumentException("El documento '" + docParam.getNombre() + "' solo aplica para Motocicletas.");
+        }
+        if ("Motocicleta".equalsIgnoreCase(tipoVehiculo) && "A".equals(aplica)) {
+            throw new IllegalArgumentException("El documento '" + docParam.getNombre() + "' solo aplica para Automóviles.");
+        }
+    }
+
     // Operación Crear (POST): Registra un nuevo vehículo garantizando las restricciones requeridas
     public Vehiculo guardar(Vehiculo vehiculo) {
         // Regla obligatoria: No se puede crear un vehículo sin que tenga al menos un documento asociado
@@ -116,6 +128,9 @@ public class VehiculoService {
                     .orElseThrow(() -> new ResourceNotFoundException("Documento parametrizado no encontrado con el ID: " + doc.getDocumento().getId()));
             doc.setDocumento(docParam);
 
+            // Valida compatibilidad entre el documento y el tipo de vehículo
+            validarCompatibilidadDocumento(vehiculo.getTipoVehiculo(), docParam);
+
             // Valida la obligatoriedad y congruencia cronológica de las fechas de expedición y vencimiento
             if (doc.getFechaExpedicion() == null || doc.getFechaVencimiento() == null) {
                 throw new IllegalArgumentException("Las fechas de expedición y vencimiento son obligatorias para cada documento.");
@@ -144,6 +159,8 @@ public class VehiculoService {
 
             // Actualización condicional de atributos del vehículo
             if (vehiculoDetalles.getTipoVehiculo() != null) {
+                String placaEfectiva = vehiculo.getPlaca();
+                validarPlacaPorTipo(placaEfectiva, vehiculoDetalles.getTipoVehiculo());
                 vehiculo.setTipoVehiculo(vehiculoDetalles.getTipoVehiculo());
             }
             if (vehiculoDetalles.getTipoServicio() != null) {
@@ -194,6 +211,7 @@ public class VehiculoService {
             }
             Documento docParam = documentoRepository.findById(nuevoDocumento.getDocumento().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Documento parametrizado no encontrado con el ID: " + nuevoDocumento.getDocumento().getId()));
+            validarCompatibilidadDocumento(vehiculo.getTipoVehiculo(), docParam);
             nuevoDocumento.setDocumento(docParam);
 
             // Valida las fechas de expedición y vencimiento

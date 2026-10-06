@@ -83,7 +83,8 @@ CREATE TABLE `vehiculo_documento` (
   `documento_id` int(11) NOT NULL,
   `fecha_expedicion` date NOT NULL,
   `fecha_vencimiento` date NOT NULL,
-  `estado` varchar(20) NOT NULL
+  `estado` varchar(20) NOT NULL,
+  `documento_pdf_base64` longtext DEFAULT NULL
 ) ;
 
 --
@@ -161,6 +162,86 @@ ALTER TABLE `vehiculo_documento`
   ADD CONSTRAINT `vehiculo_documento_ibfk_1` FOREIGN KEY (`vehiculo_id`) REFERENCES `vehiculo` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `vehiculo_documento_ibfk_2` FOREIGN KEY (`documento_id`) REFERENCES `documento` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `chk_vehiculo_doc_estado` CHECK (`estado` IN ('Habilitado', 'Vencido', 'En Verificación'));
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `personas`
+--
+
+CREATE TABLE `personas` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `identificacion` varchar(50) NOT NULL,
+  `tipo_identificacion` varchar(20) NOT NULL,
+  `nombres` varchar(100) NOT NULL,
+  `apellidos` varchar(100) NOT NULL,
+  `correo` varchar(150) NOT NULL,
+  `tipo_persona` varchar(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_persona_identificacion` (`identificacion`),
+  UNIQUE KEY `uk_persona_correo` (`correo`),
+  CONSTRAINT `chk_persona_tipo_id` CHECK (`tipo_identificacion` IN ('CC', 'CE', 'PASAPORTE')),
+  CONSTRAINT `chk_persona_tipo` CHECK (`tipo_persona` IN ('C', 'A'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `personas`
+--
+
+INSERT INTO `personas` (`id`, `identificacion`, `tipo_identificacion`, `nombres`, `apellidos`, `correo`, `tipo_persona`) VALUES
+(1, '1001234567', 'CC', 'Carlos', 'Gomez', 'carlos.admin@example.com', 'A'),
+(2, '1007654321', 'CC', 'Pedro', 'Ramirez', 'pedro.conductor@example.com', 'C');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `usuarios`
+--
+
+CREATE TABLE `usuarios` (
+  `idpersona` bigint(20) NOT NULL,
+  `login` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `apikey` varchar(255) NOT NULL,
+  PRIMARY KEY (`idpersona`, `login`),
+  UNIQUE KEY `uk_usuario_apikey` (`apikey`),
+  CONSTRAINT `fk_usuario_persona` FOREIGN KEY (`idpersona`) REFERENCES `personas` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `usuarios`
+--
+
+INSERT INTO `usuarios` (`idpersona`, `login`, `password`, `apikey`) VALUES
+(1, 'cg1001234567', 'Admin123*', 'api-key-admin-token-secret-12345');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `vehiculo_personas`
+--
+
+CREATE TABLE `vehiculo_personas` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `vehiculo_id` int(11) NOT NULL,
+  `persona_id` bigint(20) NOT NULL,
+  `fecha_asociacion` date NOT NULL,
+  `estado_conductor` varchar(2) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_vp_vehiculo` (`vehiculo_id`),
+  KEY `fk_vp_persona` (`persona_id`),
+  CONSTRAINT `fk_vp_vehiculo` FOREIGN KEY (`vehiculo_id`) REFERENCES `vehiculo` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_vp_persona` FOREIGN KEY (`persona_id`) REFERENCES `personas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_vp_estado` CHECK (`estado_conductor` IN ('PO', 'EA', 'RO'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `vehiculo_personas`
+--
+
+INSERT INTO `vehiculo_personas` (`id`, `vehiculo_id`, `persona_id`, `fecha_asociacion`, `estado_conductor`) VALUES
+(1, 1, 2, '2026-02-01', 'PO');
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

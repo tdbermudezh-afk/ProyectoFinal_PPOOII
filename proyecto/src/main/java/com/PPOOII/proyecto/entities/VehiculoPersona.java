@@ -1,5 +1,6 @@
 package com.PPOOII.proyecto.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ public class VehiculoPersona {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "vehiculo_id", nullable = false)
+    @JsonBackReference
     private Vehiculo vehiculo;
 
     @ManyToOne(fetch = FetchType.EAGER)
