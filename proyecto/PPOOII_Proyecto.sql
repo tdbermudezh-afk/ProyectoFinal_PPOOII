@@ -242,8 +242,70 @@ CREATE TABLE `vehiculo_personas` (
 INSERT INTO `vehiculo_personas` (`id`, `vehiculo_id`, `persona_id`, `fecha_asociacion`, `estado_conductor`) VALUES
 (1, 1, 2, '2026-02-01', 'PO');
 
+-- --------------------------------------------------------
+-- ENTREGA 3: Adición de campos en la entidad 'personas' para conductores
+-- --------------------------------------------------------
+
+-- Adición del campo para almacenar el documento de licencia en formato BASE64
+ALTER TABLE `personas` ADD COLUMN `licencia_conduccion` LONGTEXT NULL COMMENT 'Documento de licencia en formato Base64';
+
+-- Adición del campo para la fecha de vigencia de la licencia de conducción
+ALTER TABLE `personas` ADD COLUMN `fecha_vigencia_licencia` DATE NULL COMMENT 'Fecha de vigencia de la licencia';
+
+-- Actualización de datos de prueba para el conductor existente (Pedro Ramírez, id: 2)
+UPDATE `personas` SET `fecha_vigencia_licencia` = '2027-12-31' WHERE `id` = 2;
+
+-- --------------------------------------------------------
+-- ENTREGA 3: Estructura de tabla para la entidad 'trayecto'
+-- --------------------------------------------------------
+
+-- Creación de la tabla trayecto que almacena las paradas de cada ruta
+CREATE TABLE `trayecto` (
+  -- Identificador único autoincremental de cada trayecto/parada
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  -- Clave foránea referenciando a la persona que realiza el recorrido (debe ser conductor 'C')
+  `idpersona` bigint(20) NOT NULL,
+  -- Clave foránea referenciando al vehículo asignado al recorrido
+  `idvehiculo` int(11) NOT NULL,
+  -- Código identificador de la ruta que agrupa los trayectos (entre 2 y 7 paradas)
+  `codigo_ruta` varchar(50) NOT NULL,
+  -- Nombre o descripción textual del punto de parada
+  `ubicacion` varchar(255) NOT NULL,
+  -- Orden de la parada: 0 = inicial, número mayor = final, valores intermedios = paradas intermedias
+  `orden_parada` int(11) NOT NULL,
+  -- Coordenada de latitud geográfica obtenida vía Google Maps
+  `latitud` double DEFAULT NULL,
+  -- Coordenada de longitud geográfica obtenida vía Google Maps
+  `longitud` double DEFAULT NULL,
+  -- Login del usuario que registra el trayecto para fines de trazabilidad
+  `login` varchar(100) NOT NULL,
+  -- Definición de clave primaria
+  PRIMARY KEY (`id`),
+  -- Índices para optimizar las consultas por persona, vehículo y código de ruta
+  KEY `fk_trayecto_persona` (`idpersona`),
+  KEY `fk_trayecto_vehiculo` (`idvehiculo`),
+  KEY `idx_trayecto_codigo_ruta` (`codigo_ruta`),
+  -- Restricción de integridad referencial con eliminación en cascada hacia personas
+  CONSTRAINT `fk_trayecto_persona` FOREIGN KEY (`idpersona`) REFERENCES `personas` (`id`) ON DELETE CASCADE,
+  -- Restricción de integridad referencial con eliminación en cascada hacia vehiculo
+  CONSTRAINT `fk_trayecto_vehiculo` FOREIGN KEY (`idvehiculo`) REFERENCES `vehiculo` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Volcado de datos de prueba para la tabla 'trayecto' (Ruta RUTA-IBG-01)
+-- --------------------------------------------------------
+
+-- Parada 0: Parada inicial en el Conservatorio del Tolima
+INSERT INTO `trayecto` (`id`, `idpersona`, `idvehiculo`, `codigo_ruta`, `ubicacion`, `orden_parada`, `latitud`, `longitud`, `login`) VALUES
+(1, 2, 1, 'RUTA-IBG-01', 'Conservatorio del Tolima, Ibagué, Tolima', 0, 4.43265, -75.23412, 'cg1001234567'),
+-- Parada 1: Parada intermedia en Centro Comercial La Estación
+(2, 2, 1, 'RUTA-IBG-01', 'Centro Comercial La Estacion, Ibagué, Tolima', 1, 4.43956, -75.20875, 'cg1001234567'),
+-- Parada 2: Parada final en Acqua Power Center
+(3, 2, 1, 'RUTA-IBG-01', 'Acqua Power Center, Ibagué, Tolima', 2, 4.43710, -75.20450, 'cg1001234567');
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+

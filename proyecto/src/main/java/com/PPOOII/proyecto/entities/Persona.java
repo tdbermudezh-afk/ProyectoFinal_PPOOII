@@ -38,12 +38,23 @@ public class Persona {
     @Column(name = "tipo_persona", nullable = false, length = 1)
     private String tipoPersona;
 
+    // Campo temporal para retornar el usuario generado automáticamente al crear un administrativo
     @Transient
     private Usuario usuarioGenerado;
 
+    // ENTREGA 3: Documento de licencia de conducción en formato Base64 (BLOB/LONGTEXT)
+    @Lob
+    @Column(name = "licencia_conduccion", columnDefinition = "LONGTEXT")
+    private String licenciaConduccion;
+
+    // ENTREGA 3: Fecha límite de vigencia de la licencia de conducción
+    @Column(name = "fecha_vigencia_licencia")
+    private java.time.LocalDate fechaVigenciaLicencia;
+
+    // Constructor vacío por defecto requerido por JPA
     public Persona() {}
 
-    // Getters y Setters
+    // Métodos Getter y Setter documentados
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -67,4 +78,10 @@ public class Persona {
 
     public Usuario getUsuarioGenerado() { return usuarioGenerado; }
     public void setUsuarioGenerado(Usuario usuarioGenerado) { this.usuarioGenerado = usuarioGenerado; }
+
+    public String getLicenciaConduccion() { return licenciaConduccion; }
+    public void setLicenciaConduccion(String licenciaConduccion) { this.licenciaConduccion = licenciaConduccion; }
+
+    public java.time.LocalDate getFechaVigenciaLicencia() { return fechaVigenciaLicencia; }
+    public void setFechaVigenciaLicencia(java.time.LocalDate fechaVigenciaLicencia) { this.fechaVigenciaLicencia = fechaVigenciaLicencia; }
 }

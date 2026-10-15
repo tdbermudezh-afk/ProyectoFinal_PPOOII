@@ -86,4 +86,34 @@ public class ConsultaPublicaController {
         
         return ResponseEntity.ok(respuesta);
     }
+
+    // -------------------------------------------------------------------------
+    // FRONT-END HELPER (ENTREGA 3): Obtener clave de Google Maps configurada
+    // -------------------------------------------------------------------------
+    @org.springframework.beans.factory.annotation.Value("${google.maps.api.key:}")
+    private String googleMapsApiKey;
+
+    @Operation(summary = "Obtener configuración de Google Maps para el Front-End")
+    @GetMapping("/config/maps-key")
+    public ResponseEntity<Map<String, String>> obtenerConfigGoogleMaps() {
+        return ResponseEntity.ok(Map.of("apiKey", googleMapsApiKey != null ? googleMapsApiKey : ""));
+    }
+
+    // -------------------------------------------------------------------------
+    // FRONT-END HELPER (ENTREGA 3): Listar rutas y trayectos para visualización pública en mapa
+    // -------------------------------------------------------------------------
+    @Autowired
+    private com.PPOOII.proyecto.repository.TrayectoRepository trayectoRepo;
+
+    @Operation(summary = "Listar todas las rutas registradas")
+    @GetMapping("/rutas")
+    public ResponseEntity<List<String>> listarRutasPublicas() {
+        return ResponseEntity.ok(trayectoRepo.findDistinctCodigosRuta());
+    }
+
+    @Operation(summary = "Obtener paradas y detalle de una ruta para visualización en el mapa")
+    @GetMapping("/rutas/{codigoRuta}/paradas")
+    public ResponseEntity<List<com.PPOOII.proyecto.entities.Trayecto>> obtenerParadasRutaPublica(@PathVariable String codigoRuta) {
+        return ResponseEntity.ok(trayectoRepo.findByCodigoRutaOrderByOrdenParadaAsc(codigoRuta));
+    }
 }

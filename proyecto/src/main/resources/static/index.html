@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Configuración básica de codificación y viewport para diseño responsivo -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Monitoreo de Rutas y Trayectos - Entrega 3</title>
+    <!-- Vinculación con los estilos personalizados -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Encabezado superior con título del sistema y estado de conexión -->
+    <header class="top-navbar">
+        <h1>
+            <span>🗺️</span>
+            <span>Sistema Integral de Monitoreo de Rutas y Vehículos</span>
+        </h1>
+        <div class="system-status">
+            <span class="status-dot"></span>
+            <span>API Backend Online (Puerto 9001)</span>
+        </div>
+    </header>
+
+    <!-- Estructura principal con barra lateral y contenedor del mapa -->
+    <div class="main-layout">
+
+        <!-- Barra lateral de controles, detalles de ruta y paradas -->
+        <aside class="sidebar">
+
+            <!-- Panel de selección de ruta y filtros -->
+            <section class="filter-card">
+                <div class="form-group">
+                    <label for="routeSelect">📍 Seleccione Código de Ruta:</label>
+                    <select id="routeSelect" class="form-select">
+                        <option value="">Cargando rutas...</option>
+                    </select>
+                </div>
+                <button id="btnReload" class="btn-primary">
+                    <span>🔄</span>
+                    <span>Actualizar Datos de Ruta</span>
+                </button>
+            </section>
+
+            <!-- Tarjeta con resumen de información del vehículo y conductor -->
+            <section class="info-card" id="routeInfoCard" style="display: none;">
+                <div class="info-header">
+                    <span class="info-title" id="lblRouteCode">Ruta</span>
+                    <span class="badge-tag badge-active" id="lblVehicleStatus">En Operación</span>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Vehículo</div>
+                        <div class="info-value" id="lblVehicleName">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Placa</div>
+                        <div class="info-value" id="lblVehiclePlate">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tipo / Servicio</div>
+                        <div class="info-value" id="lblVehicleType">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Conductor Asignado</div>
+                        <div class="info-value" id="lblDriverName">-</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección con el listado cronológico de paradas / trayectos -->
+            <section class="stops-section">
+                <div class="stops-title">Secuencia de Paradas (Itinerario)</div>
+                <div class="stops-timeline" id="stopsList">
+                    <p style="font-size: 13px; color: #7f8c8d;">Seleccione una ruta arriba para desplegar sus trayectos.</p>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Contenedor del mapa de Google Maps -->
+        <main class="map-container">
+            <div id="map"></div>
+            <!-- Banner informativo en caso de que aún no se haya suministrado la clave -->
+            <div id="keyBanner" class="map-fallback-banner" style="display: none;">
+                <strong>ℹ️ Modo Configuración de Google Maps</strong>
+                <p>Tu clave de Google Maps se leerá automáticamente de <code>application.properties</code> una vez la configures.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script de lógica de la aplicación -->
+    <script src="index.js"></script>
+</body>
+</html>
+
