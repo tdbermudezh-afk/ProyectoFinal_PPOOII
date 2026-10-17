@@ -303,9 +303,200 @@ INSERT INTO `trayecto` (`id`, `idpersona`, `idvehiculo`, `codigo_ruta`, `ubicaci
 -- Parada 2: Parada final en Acqua Power Center
 (3, 2, 1, 'RUTA-IBG-01', 'Acqua Power Center, Ibagué, Tolima', 2, 4.43710, -75.20450, 'cg1001234567');
 
+-- ----------------------------------------------------------------------------------------------------
+-- ENTREGA 4: Creación de la tabla temporal 'trayecto_tmp' para el cargue masivo desde Excel
+-- ----------------------------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `trayecto_tmp` (
+  -- Identificador único autoincremental de la tabla temporal
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  -- Identificación o ID del conductor diligenciado en el archivo Excel (como texto para flexibilidad)
+  `idpersona_txt` varchar(100) DEFAULT NULL,
+  -- Placa o ID del vehículo diligenciado en el archivo Excel
+  `idvehiculo_txt` varchar(50) DEFAULT NULL,
+  -- Código de ruta que agrupa las paradas
+  `codigo_ruta` varchar(50) DEFAULT NULL,
+  -- Nombre o texto descriptivo de la parada o ubicación
+  `ubicacion` varchar(255) DEFAULT NULL,
+  -- Orden de parada indicado en el Excel (0 = inicial, mayor = final)
+  `orden_parada_txt` varchar(10) DEFAULT NULL,
+  -- Latitud geográfica (opcional en el Excel)
+  `latitud_txt` varchar(50) DEFAULT NULL,
+  -- Longitud geográfica (opcional en el Excel)
+  `longitud_txt` varchar(50) DEFAULT NULL,
+  -- Login del usuario que realiza el cargue masivo
+  `login` varchar(100) DEFAULT NULL,
+  -- Identificador numérico del cargue generado con la fecha y hora: yyyyMMddHHmm
+  `id_cargue` double NOT NULL,
+  -- Estado del registro en el ciclo de cargue masivo: CARGADO, VALIDADO, PROCESADO o ERROR
+  `estado` varchar(15) NOT NULL DEFAULT 'CARGADO',
+  -- Descripción acumulativa de observaciones o inconsistencias detectadas
+  `observacion` varchar(1000) DEFAULT '',
+  -- Definición de clave primaria
+  PRIMARY KEY (`id`),
+  -- Índice para búsquedas por lote de cargue
+  KEY `idx_trayecto_tmp_idcargue` (`id_cargue`),
+  -- Restricción de chequeo sobre los estados permitidos
+  CONSTRAINT `chk_trayecto_tmp_estado` CHECK (`estado` IN ('CARGADO', 'VALIDADO', 'PROCESADO', 'ERROR'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ----------------------------------------------------------------------------------------------------
+-- PROCEDIMIENTOS ALMACENADOS PARA EL CARGUE MASIVO (ENTREGA 4)
+-- ----------------------------------------------------------------------------------------------------
+
+-- 1. PROCEDIMIENTO: CARGAR_TRAYECTOS_EXCEL
+-- Inserta registro por registro en trayecto_tmp con estado inicial 'CARGADO'
+DELIMITER $$
+DROP PROCEDURE IF EXISTS `CARGAR_TRAYECTOS_EXCEL`$$
+CREATE PROCEDURE `CARGAR_TRAYECTOS_EXCEL`(
+    IN p_idpersona_txt VARCHAR(100),
+    IN p_idvehiculo_txt VARCHAR(50),
+    IN p_codigo_ruta VARCHAR(50),
+    IN p_ubicacion VARCHAR(255),
+    IN p_orden_parada_txt VARCHAR(10),
+    IN p_latitud_txt VARCHAR(50),
+    IN p_longitud_txt VARCHAR(50),
+    IN p_login VARCHAR(100),
+    IN p_id_cargue DOUBLE
+)
+BEGIN
+    INSERT INTO `trayecto_tmp` (
+        `idpersona_txt`, `idvehiculo_txt`, `codigo_ruta`, `ubicacion`, 
+        `orden_parada_txt`, `latitud_txt`, `longitud_txt`, `login`, 
+        `id_cargue`, `estado`, `observacion`
+    ) VALUES (
+        p_idpersona_txt, p_idvehiculo_txt, p_codigo_ruta, p_ubicacion, 
+        p_orden_parada_txt, p_latitud_txt, p_longitud_txt, p_login, 
+        p_id_cargue, 'CARGADO', ''
+    );
+END$$
+
+-- 2. PROCEDIMIENTO: VALIDAR_TRAYECTOS_CARGUE
+-- Aplica las validaciones de negocio acumulativas y clasifica en 'VALIDADO' o 'ERROR'
+DROP PROCEDURE IF EXISTS `VALIDAR_TRAYECTOS_CARGUE`$$
+CREATE PROCEDURE `VALIDAR_TRAYECTOS_CARGUE`(
+    IN p_id_cargue DOUBLE
+)
+BEGIN
+    -- A. Validación de campos obligatorios nulos o vacíos
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'ERROR',
+        `observacion` = CONCAT(`observacion`, ' [Conductor no especificado]')
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'CARGADO'
+      AND (`idpersona_txt` IS NULL OR TRIM(`idpersona_txt`) = '');
+
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'ERROR',
+        `observacion` = CONCAT(`observacion`, ' [Vehículo no especificado]')
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'CARGADO'
+      AND (`idvehiculo_txt` IS NULL OR TRIM(`idvehiculo_txt`) = '');
+
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'ERROR',
+        `observacion` = CONCAT(`observacion`, ' [Código de ruta no especificado]')
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'CARGADO'
+      AND (`codigo_ruta` IS NULL OR TRIM(`codigo_ruta`) = '');
+
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'ERROR',
+        `observacion` = CONCAT(`observacion`, ' [Ubicación de parada no especificada]')
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'CARGADO'
+      AND (`ubicacion` IS NULL OR TRIM(`ubicacion`) = '');
+
+    -- B. Validación de existencia del conductor y verificación de rol CONDUCTOR ('C')
+    UPDATE `trayecto_tmp` t
+    LEFT JOIN `personas` p ON (p.id = CONVERT(t.idpersona_txt, SIGNED INTEGER) OR p.identificacion = t.idpersona_txt)
+    SET t.`estado` = 'ERROR',
+        t.`observacion` = CONCAT(t.`observacion`, ' [El conductor especificado no existe]')
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'CARGADO'
+      AND p.id IS NULL;
+
+    UPDATE `trayecto_tmp` t
+    JOIN `personas` p ON (p.id = CONVERT(t.idpersona_txt, SIGNED INTEGER) OR p.identificacion = t.idpersona_txt)
+    SET t.`estado` = 'ERROR',
+        t.`observacion` = CONCAT(t.`observacion`, ' [La persona no tiene rol de Conductor (C)]')
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'CARGADO'
+      AND p.tipo_persona <> 'C';
+
+    -- C. Validación de existencia del vehículo (por ID o por Placa)
+    UPDATE `trayecto_tmp` t
+    LEFT JOIN `vehiculo` v ON (v.id = CONVERT(t.idvehiculo_txt, SIGNED INTEGER) OR v.placa = t.idvehiculo_txt)
+    SET t.`estado` = 'ERROR',
+        t.`observacion` = CONCAT(t.`observacion`, ' [El vehículo especificado no existe]')
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'CARGADO'
+      AND v.id IS NULL;
+
+    -- D. Validación de documentos del vehículo: Todos deben estar 'Habilitado'
+    UPDATE `trayecto_tmp` t
+    JOIN `vehiculo` v ON (v.id = CONVERT(t.idvehiculo_txt, SIGNED INTEGER) OR v.placa = t.idvehiculo_txt)
+    SET t.`estado` = 'ERROR',
+        t.`observacion` = CONCAT(t.`observacion`, ' [El vehículo tiene documentos no habilitados o vencidos]')
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'CARGADO'
+      AND (
+          NOT EXISTS (SELECT 1 FROM `vehiculo_documento` vd WHERE vd.vehiculo_id = v.id)
+          OR EXISTS (SELECT 1 FROM `vehiculo_documento` vd WHERE vd.vehiculo_id = v.id AND vd.estado <> 'Habilitado')
+      );
+
+    -- E. Validación de estado del conductor en relación con el vehículo: Debe ser 'PO' (Puede Operar)
+    UPDATE `trayecto_tmp` t
+    JOIN `personas` p ON (p.id = CONVERT(t.idpersona_txt, SIGNED INTEGER) OR p.identificacion = t.idpersona_txt)
+    JOIN `vehiculo` v ON (v.id = CONVERT(t.idvehiculo_txt, SIGNED INTEGER) OR v.placa = t.idvehiculo_txt)
+    SET t.`estado` = 'ERROR',
+        t.`observacion` = CONCAT(t.`observacion`, ' [El conductor no cuenta con autorización PO para operar este vehículo]')
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'CARGADO'
+      AND NOT EXISTS (
+          SELECT 1 FROM `vehiculo_personas` vp 
+          WHERE vp.persona_id = p.id AND vp.vehiculo_id = v.id AND vp.estado_conductor = 'PO'
+      );
+
+    -- F. Si superó todas las validaciones (observación vacía), marcar como 'VALIDADO'
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'VALIDADO'
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'CARGADO'
+      AND (`observacion` IS NULL OR TRIM(`observacion`) = '');
+
+END$$
+
+-- 3. PROCEDIMIENTO: PROCESAR_TRAYECTOS_EXCEL
+-- Traslada registros 'VALIDADO' a la tabla transaccional definitiva 'trayecto' y marca 'PROCESADO'
+DROP PROCEDURE IF EXISTS `PROCESAR_TRAYECTOS_EXCEL`$$
+CREATE PROCEDURE `PROCESAR_TRAYECTOS_EXCEL`(
+    IN p_id_cargue DOUBLE
+)
+BEGIN
+    -- Inserción de los registros aprobados en la tabla transaccional definitiva trayecto
+    INSERT INTO `trayecto` (
+        `idpersona`, `idvehiculo`, `codigo_ruta`, `ubicacion`, 
+        `orden_parada`, `latitud`, `longitud`, `login`
+    )
+    SELECT 
+        p.id,
+        v.id,
+        t.`codigo_ruta`,
+        t.`ubicacion`,
+        COALESCE(CONVERT(t.`orden_parada_txt`, SIGNED INTEGER), 0),
+        CASE WHEN t.`latitud_txt` IS NOT NULL AND t.`latitud_txt` <> '' 
+             THEN CONVERT(REPLACE(t.`latitud_txt`, ',', '.'), DOUBLE) ELSE NULL END,
+        CASE WHEN t.`longitud_txt` IS NOT NULL AND t.`longitud_txt` <> '' 
+             THEN CONVERT(REPLACE(t.`longitud_txt`, ',', '.'), DOUBLE) ELSE NULL END,
+        COALESCE(t.`login`, 'SISTEMA')
+    FROM `trayecto_tmp` t
+    JOIN `personas` p ON (p.id = CONVERT(t.idpersona_txt, SIGNED INTEGER) OR p.identificacion = t.idpersona_txt)
+    JOIN `vehiculo` v ON (v.id = CONVERT(t.idvehiculo_txt, SIGNED INTEGER) OR v.placa = t.idvehiculo_txt)
+    WHERE t.`id_cargue` = p_id_cargue AND t.`estado` = 'VALIDADO';
+
+    -- Marcar los registros cargados exitosamente como 'PROCESADO'
+    UPDATE `trayecto_tmp`
+    SET `estado` = 'PROCESADO'
+    WHERE `id_cargue` = p_id_cargue AND `estado` = 'VALIDADO';
+
+END$$
+DELIMITER ;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
 
