@@ -1908,6 +1908,65 @@
           "response": []
         },
         {
+          "name": "Test 37.1: Rechazar Cargue de Documento cuando NO se envía el PDF en Base64 (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/operaciones/documentos/cargar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "operaciones",
+                "documentos",
+                "cargar"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 4 (20%): Obligatoriedad del archivo PDF en Base64 en el servicio de cargue.\n**Objetivo:** Confirmar que si no se envía `documentoPdfBase64` (nulo o vacío), el sistema rechace la petición con `400 Bad Request` indicando que el documento hace falta.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"vehiculoId\": 1,\n    \"documentoId\": 3,\n    \"fechaExpedicion\": \"2026-03-01\",\n    \"fechaVencimiento\": \"2027-03-01\",\n    \"estado\": \"Habilitado\",\n    \"documentoPdfBase64\": \"\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Test 38: Asociar Vehículo a un Conductor específico (POST)",
           "event": [
             {
