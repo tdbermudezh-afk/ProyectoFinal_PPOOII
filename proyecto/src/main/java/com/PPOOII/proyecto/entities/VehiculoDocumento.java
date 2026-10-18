@@ -6,13 +6,17 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import java.io.Serializable;
 import java.time.LocalDate;
 
 // Entidad JPA que modela la relación de asociación entre un Vehículo y un Documento
 // Contiene los atributos complementarios: fechas de expedición, vencimiento y estado
 @Entity
 @Table(name = "vehiculo_documento")
-public class VehiculoDocumento {
+public class VehiculoDocumento implements Serializable {
+
+    // Identificador de versión de serialización según el Laboratorio 1
+    private static final long serialVersionUID = 1L;
 
     // Identificador único del registro de documento asociado al vehículo
     @Id
@@ -81,5 +85,10 @@ public class VehiculoDocumento {
 
     public void setDocumentoPdfBase64(String documentoPdfBase64) {
         this.documentoPdfBase64 = documentoPdfBase64;
+    }
+
+    @Override // Sobrescribe el método toString según el Laboratorio 1
+    public String toString() { // Representación textual de VehiculoDocumento
+        return "VehiculoDocumento [id=" + this.id + ", estado=" + this.estado + ", fechaExpedicion=" + this.fechaExpedicion + ", fechaVencimiento=" + this.fechaVencimiento + "]";
     }
 }

@@ -78,32 +78,74 @@ public class TrayectoExcelService implements ITrayectoExcelService {
                     continue;
                 }
 
-                // Invocación del Procedimiento 1: CARGAR_TRAYECTOS_EXCEL
-                trayectoTmpRepository.CARGAR_TRAYECTOS_EXCEL(
-                        idPersona, idVehiculo, codigoRuta, ubicacion,
-                        ordenParada, latitud, longitud, usuarioEfectivo, idCargue
-                );
-                totalFilasLeidas++;
-            }
+                // Invocación del Método 1 (Procedimiento CARGAR_TRAYECTOS_EXCEL) según Laboratorio 4 Complementario
+                if (this.cargarDatosExcel(idPersona, idVehiculo, codigoRuta, ubicacion,
+                        ordenParada, latitud, longitud, usuarioEfectivo, idCargue)) { // Verifica si el cargue de la fila fue exitoso
+                    totalFilasLeidas++; // Incrementa el contador de filas cargadas
+                } // Fin de invocación de cargarDatosExcel
+            } // Fin del ciclo for sobre las filas del Excel
 
-            logger.info("[FASE 1 COMPLETADA] Filas cargadas en trayecto_tmp: {}", totalFilasLeidas);
+            logger.info("[FASE 1 COMPLETADA] Filas cargadas en trayecto_tmp: {}", totalFilasLeidas); // Log de fase 1
 
-            // FASE 2: Invocación del Procedimiento 2: VALIDAR_TRAYECTOS_CARGUE
-            logger.info("[FASE 2 INICIADA] Ejecutando procedimiento VALIDAR_TRAYECTOS_CARGUE para idCargue: {}", idCargue);
-            trayectoTmpRepository.VALIDAR_TRAYECTOS_CARGUE(idCargue);
+            // FASE 2 y FASE 3 encadenadas mediante métodos booleanos según Laboratorio 4 Complementario (pág. 9)
+            if (this.validarDatosExcel(idCargue)) { // Ejecuta y verifica el procedimiento de validación de reglas de negocio
+                logger.info("Validación de datos cargados. EXITOSO!!!!!"); // Mensaje de éxito de validación
+                if (this.procesarDatosExcel(idCargue)) { // Ejecuta y verifica el procedimiento de procesado a tabla transaccional
+                    logger.info("Procesado de datos validados. EXITOSO!!!!!"); // Mensaje de éxito de procesado
+                } // Fin de procesarDatosExcel
+            } // Fin de validarDatosExcel
 
-            // FASE 3: Invocación del Procedimiento 3: PROCESAR_TRAYECTOS_EXCEL
-            logger.info("[FASE 3 INICIADA] Ejecutando procedimiento PROCESAR_TRAYECTOS_EXCEL para idCargue: {}", idCargue);
-            trayectoTmpRepository.PROCESAR_TRAYECTOS_EXCEL(idCargue);
-
-        } catch (Exception e) {
-            logger.error("[ERROR EN PROCESAMIENTO EXCEL] idCargue: {}, Causa: {}", idCargue, e.getMessage());
-            throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e);
-        }
+        } catch (Exception e) { // Captura cualquier excepción en la lectura del archivo Excel
+            logger.error("[ERROR EN PROCESAMIENTO EXCEL] idCargue: {}, Causa: {}", idCargue, e.getMessage()); // Registra el error
+            throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e); // Propaga la excepción
+        } // Fin del bloque try-catch
 
         // Construir balance final del cargue masivo
-        return obtenerResumenCargue(idCargue);
-    }
+        return obtenerResumenCargue(idCargue); // Retorna el mapa con las estadísticas y registros del cargue
+    } // Fin del método procesarCargueExcel
+
+    // Implementación del método 1 del Laboratorio 4 Complementario: Invoca el procedimiento CARGAR_TRAYECTOS_EXCEL
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean cargarDatosExcel(String idPersona, String idVehiculo, String codigoRuta, String ubicacion,
+                                    String ordenParada, String latitud, String longitud, String loginUsuario, Double idCargue) { // Parámetros de la fila Excel
+        try { // Bloque try para controlar la invocación del procedimiento almacenado
+            trayectoTmpRepository.CARGAR_TRAYECTOS_EXCEL(
+                    idPersona, idVehiculo, codigoRuta, ubicacion,
+                    ordenParada, latitud, longitud, loginUsuario, idCargue
+            ); // Llama al procedimiento almacenado en MySQL
+            logger.info("Se carga registro de excel a tabla temporal de forma exitosa!!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores en la invocación del procedimiento
+            logger.error("ERROR CARGAR DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método cargarDatosExcel
+
+    // Implementación del método 2 del Laboratorio 4 Complementario: Invoca el procedimiento VALIDAR_TRAYECTOS_CARGUE
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean validarDatosExcel(Double idCargue) { // Recibe el identificador único del lote de cargue
+        try { // Bloque try para controlar la invocación del procedimiento de validación
+            trayectoTmpRepository.VALIDAR_TRAYECTOS_CARGUE(idCargue); // Llama al procedimiento almacenado VALIDAR_TRAYECTOS_CARGUE
+            logger.info("Se valida registro de excel en tabla temporal de forma exitosa!!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores durante la validación en base de datos
+            logger.error("ERROR VALIDANDO DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método validarDatosExcel
+
+    // Implementación del método 3 del Laboratorio 4 Complementario: Invoca el procedimiento PROCESAR_TRAYECTOS_EXCEL
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean procesarDatosExcel(Double idCargue) { // Recibe el identificador único del lote de cargue
+        try { // Bloque try para controlar la invocación del procedimiento de procesado
+            trayectoTmpRepository.PROCESAR_TRAYECTOS_EXCEL(idCargue); // Llama al procedimiento almacenado PROCESAR_TRAYECTOS_EXCEL
+            logger.info("Se procesan los datos validados de forma exitosa y se trasladan a la tabla transaccional!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores durante el traslado a la tabla transaccional
+            logger.error("ERROR PROCESAR DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método procesarDatosExcel
 
     // Consulta de los registros de un cargue específico
     @Override

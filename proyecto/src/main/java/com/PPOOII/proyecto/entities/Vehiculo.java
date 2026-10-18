@@ -7,12 +7,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.io.Serializable;
 import java.util.List;
 
 // Entidad JPA que representa la tabla 'vehiculo' en la base de datos MySQL
 @Entity
 @Table(name = "vehiculo")
-public class Vehiculo {
+public class Vehiculo implements Serializable {
+
+    // Identificador de versión para la serialización de la entidad según el Laboratorio 1
+    private static final long serialVersionUID = 1L;
 
     // Identificador único del vehículo (Clave primaria autoincremental)
     @Id
@@ -120,4 +124,9 @@ public class Vehiculo {
 
     public List<VehiculoPersona> getConductores() { return conductores; }
     public void setConductores(List<VehiculoPersona> conductores) { this.conductores = conductores; }
+
+    @Override // Sobrescribe el método toString según el Laboratorio 1
+    public String toString() { // Representación textual del objeto Vehiculo
+        return "Vehiculo [id=" + this.id + ", placa=" + this.placa + ", tipoVehiculo=" + this.tipoVehiculo + ", marca=" + this.marca + ", linea=" + this.linea + "]";
+    }
 }

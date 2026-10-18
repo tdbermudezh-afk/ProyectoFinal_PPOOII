@@ -4,11 +4,15 @@ package com.PPOOII.proyecto.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import java.io.Serializable;
 
 // Entidad JPA que representa la tabla paramétrica o de configuración 'documento'
 @Entity
 @Table(name = "documento")
-public class Documento {
+public class Documento implements Serializable {
+
+    // Identificador de versión de serialización según el Laboratorio 1
+    private static final long serialVersionUID = 1L;
 
     // Identificador único del documento parametrizado (Clave primaria autoincremental)
     @Id
@@ -62,4 +66,9 @@ public class Documento {
 
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    @Override // Sobrescribe el método toString según el Laboratorio 1
+    public String toString() { // Representación textual de Documento
+        return "Documento [id=" + this.id + ", codigo=" + this.codigo + ", nombre=" + this.nombre + ", aplicaA=" + this.aplicaA + "]";
+    }
 }
