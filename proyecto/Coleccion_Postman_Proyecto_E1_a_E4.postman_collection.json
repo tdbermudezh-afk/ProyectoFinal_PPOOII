@@ -156,6 +156,49 @@
           "response": []
         },
         {
+          "name": "Test 3.1: Rechazo de petición con x-api-key válida pero token inexistente o falso (401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "Bearer token-falso-inexistente-999",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Validación estricta de autenticidad del Token junto con la APIKey.\n**Objetivo:** Confirmar que si se envía una `x-api-key` real pero un `token` inventado o inexistente, el sistema rechace el acceso con `401 Unauthorized`."
+          },
+          "response": []
+        },
+        {
           "name": "Test 4: Acceso exitoso con credenciales válidas de Administrador (200 OK)",
           "event": [
             {
@@ -194,7 +237,7 @@
                 "vehiculos"
               ]
             },
-            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Acceso autorizado únicamente a usuarios de tipo ADMINISTRADOR ('A').\n**Objetivo:** Verificar que con `x-api-key` y `token` válidos de un usuario Administrativo el interceptor conceda el paso al controlador."
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Acceso autorizado únicamente a usuarios de tipo ADMINISTRADOR ('A') con APIKey y Token válidos.\n**Objetivo:** Verificar que con `x-api-key` y `token` válidos de un usuario Administrativo el interceptor conceda el paso al controlador."
           },
           "response": []
         }
