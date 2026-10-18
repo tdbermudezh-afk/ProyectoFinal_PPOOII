@@ -1,0 +1,3126 @@
+{
+  "info": {
+    "_postman_id": "d629f25e-061d-4bdd-9604-8b9d8b273a9f",
+    "name": "Proyecto Final PPOOII - Batería Completa E1 a E4 (60 Tests Unitarios)",
+    "description": "Colección Maestra Exhaustiva con las 60 pruebas unitarias individuales que cubren el 100% de los requerimientos de las Entregas 1, 2, 3 y 4 (Base de Datos, Restricciones CHECK, CRUDs completos POST-GET-PUT-DELETE, Consultas Protegidas, Consultas Públicas, Tareas Programadas @Scheduled y Procedimientos Almacenados con Excel).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9001",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "0ac02b5d-468d-4bf8-ac11-db0d64f96c15",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "Bearer token-admin-2026",
+      "type": "string"
+    },
+    {
+      "key": "idDocumentoCreado",
+      "value": "6",
+      "type": "string"
+    },
+    {
+      "key": "idVehiculoCreado",
+      "value": "8",
+      "type": "string"
+    },
+    {
+      "key": "idCargue",
+      "value": "202610171555",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "BLOQUE A: Seguridad, Autenticación y Autorización por Roles (E2 - Punto 8)",
+      "description": "Pruebas del interceptor de seguridad con x-api-key, token y validación de rol Administrativo ('A').",
+      "item": [
+        {
+          "name": "Test 1: Rechazo de petición sin cabeceras (401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Protección obligatoria con `x-api-key` y `token`.\n**Objetivo:** Verificar que cualquier consumo sin el encabezado `x-api-key` sea rechazado inmediatamente por el interceptor de seguridad."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 2: Rechazo de petición con x-api-key pero sin token (401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Exigencia de Token junto al APIKey.\n**Objetivo:** Comprobar que el sistema exija el encabezado `token` o `Authorization` además de la `x-api-key`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 3: Rechazo de petición con x-api-key inexistente o inválida (401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "llave-falsa-inexistente-999",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Validación de existencia de la APIKey en la tabla `usuarios`.\n**Objetivo:** Confirmar que una llave inventada o revocada no permita el acceso a los servicios protegidos."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 4: Acceso exitoso con credenciales válidas de Administrador (200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 8: Acceso autorizado únicamente a usuarios de tipo ADMINISTRADOR ('A').\n**Objetivo:** Verificar que con `x-api-key` y `token` válidos de un usuario Administrativo el interceptor conceda el paso al controlador."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE B: Gestión de Personas, Usuarios y Licencias (E2 Puntos 1-3 y E3 BD 2.1)",
+      "description": "Pruebas de POST, GET, PUT de Persona, autogeneración de usuario con nemotecnia, licencias en Base64, cambio de password y regeneración de APIKey.",
+      "item": [
+        {
+          "name": "Test 5: Crear Persona Administrativo (POST) - Autogeneración de Usuario con Nemotecnia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 1 (15%): POST de una persona, generando automáticamente un usuario en el caso de persona tipo ADMINISTRATIVO con login por nemotecnia, password automático y APIKey automática.\n**Objetivo:** Comprobar que al crear una persona con `tipoPersona: 'A'`, se cree automáticamente su entidad `Usuario` con login `sn1055667788`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1055667788\",\n  \"tipoIdentificacion\": \"CC\",\n  \"nombres\": \"Sofia\",\n  \"apellidos\": \"Navarro\",\n  \"correo\": \"sofia.navarro@transporte.com\",\n  \"tipoPersona\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 6: Crear Persona Conductor (POST) - Sin generación de Usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 1.1 y Servicios Punto 1: Registro de persona tipo Conductor ('C'), la cual no debe generar registro en la tabla `usuarios`.\n**Objetivo:** Verificar que al registrar un Conductor (`tipoPersona: 'C'`), se guarde en `personas` con su licencia y vigencia, pero `usuarioGenerado` sea `null`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1088990011\",\n  \"tipoIdentificacion\": \"CC\",\n  \"nombres\": \"camilo\",\n  \"apellidos\": \"vargas\",\n  \"correo\": \"camilo.vargas@conductores.com\",\n  \"tipoPersona\": \"C\",\n  \"licenciaConduccion\": \"JVBERi0xLjQKJcTl8uXprKWvozMgMCBvYmoKPDwK...\",\n  \"fechaVigenciaLicencia\": \"2028-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 7: Validación de Restricción de Chequeo en Persona (tipoIdentificacion y tipoPersona)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 3.1 (20%): Restricciones de chequeo sobre el tipo de identificación (`CC`, `CE`, `PASAPORTE`) y el tipo de persona (`C`, `A`).\n**Objetivo:** Comprobar que el sistema rechace con `400 Bad Request` valores no permitidos en `tipoIdentificacion` ('TI') o en `tipoPersona` ('X').",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1099999999\",\n  \"tipoIdentificacion\": \"TI\",\n  \"nombres\": \"Juan\",\n  \"apellidos\": \"Perez\",\n  \"correo\": \"juan.perez@test.com\",\n  \"tipoPersona\": \"X\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 8: Consultar todas las Personas (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 1: Función GET de Persona.\n**Objetivo:** Obtener el listado completo de personas registradas en la base de datos."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 9: Consultar una Persona por su ID (GET /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas",
+                "3"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 1: Función GET individual de Persona.\n**Objetivo:** Recuperar los datos de una persona específica mediante su clave primaria (`id: 3`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 10: Actualizar datos de una Persona (PUT /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 1: Función PUT de Persona.\n**Objetivo:** Verificar la modificación de atributos de una persona existente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1001234567\",\n  \"tipoIdentificacion\": \"CC\",\n  \"nombres\": \"Carlos Alberto\",\n  \"apellidos\": \"Gomez Perez\",\n  \"correo\": \"carlos.gomez@transporte.com\",\n  \"tipoPersona\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 11: Registrar / Actualizar Licencia en Base64 y Fecha de Vigencia en un Conductor (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas",
+                "3"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 2.1 (40% BD): Adición de campos en la entidad PERSONA: fecha de licencia y campo BLOB para almacenar el archivo de licencia en formato BASE64.\n**Objetivo:** Comprobar que un conductor (`tipoPersona: 'C'`) almacene su soporte de licencia de conducción en Base64 y su fecha de vigencia.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1020304050\",\n  \"tipoIdentificacion\": \"CC\",\n  \"nombres\": \"Pedro\",\n  \"apellidos\": \"Ramirez\",\n  \"correo\": \"pedro.ramirez@conductores.com\",\n  \"tipoPersona\": \"C\",\n  \"licenciaConduccion\": \"JVBERi0xLjQKJcTl8uXprKWvozMgMCBvYmoKPDwK...\",\n  \"fechaVigenciaLicencia\": \"2027-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 12: Cambiar Contraseña de un Usuario (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/cg1001234567/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "cg1001234567",
+                "password"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 2 (10%): Servicio que permita el cambio de password de un usuario específico, donde la nueva contraseña se envíe por el body y el login por la URL.\n**Objetivo:** Validar el cambio de clave de acceso del usuario `cg1001234567`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NuevoPasswordSeguro2026#\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 13: Regenerar APIKey de un Usuario (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/sn1055667788/apikey/regenerar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "sn1055667788",
+                "apikey",
+                "regenerar"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 3 (10%): Servicio GET que permita nuevamente la generación del APIKey de un usuario específico.\n**Objetivo:** Comprobar que el sistema genere y asigne una nueva `apikey` aleatoria para el login indicado (`sn1055667788`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE C: CRUD Completo y Restricciones de Documento Paramétrico (E1 - Punto 2)",
+      "description": "CRUD completo (POST, GET, PUT, DELETE) de la entidad paramétrica Documento y validaciones de restricciones CHECK (aplicaA y obligatorio).",
+      "item": [
+        {
+          "name": "Test 14: Crear Nuevo Tipo de Documento Paramétrico (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.id) {",
+                  "    pm.collectionVariables.set('idDocumentoCreado', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 2: Función POST del CRUD de Documento.\n**Objetivo:** Registrar un nuevo documento en el catálogo paramétrico cumpliendo las restricciones de `aplicaA` ('A', 'M', 'AM') y `obligatorio` ('RA', 'RM', 'RR'). Guarda el ID en `{{idDocumentoCreado}}`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"DOC-POLIZA-01\",\n  \"nombre\": \"Póliza Contractual Pasajeros\",\n  \"aplicaA\": \"A\",\n  \"obligatorio\": \"RA\",\n  \"descripcion\": \"Póliza de responsabilidad civil para automóviles\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 15: Validación de Restricciones de Chequeo en Tabla Documento (aplicaA y obligatorio)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - BD Punto 2.2: Restricciones de chequeo para los campos de la tabla documentos: Tipo de Vehículo al que aplica (`A`, `M`, `AM`) y Documento obligatorio (`RA`, `RM`, `RR`).\n**Objetivo:** Verificar que el sistema rechace con `400 Bad Request` valores fuera de dominio en `aplicaA` o `obligatorio`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"DOC-INV-99\",\n  \"nombre\": \"Documento Inválido\",\n  \"aplicaA\": \"Z\",\n  \"obligatorio\": \"XX\",\n  \"descripcion\": \"Prueba de chequeo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 16: Listar Todos los Documentos Paramétricos (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 2: Función GET general del CRUD de Documento.\n**Objetivo:** Consultar el catálogo completo de tipos de documentos configurados en el sistema."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 17: Buscar Documento Paramétrico por ID (GET /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 2: Función GET por ID del CRUD de Documento.\n**Objetivo:** Obtener el detalle de un tipo de documento específico por su identificador único (`id: 1`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 18: Actualizar Documento Paramétrico (PUT /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 2: Función PUT del CRUD de Documento.\n**Objetivo:** Modificar la descripción o atributos de un documento paramétrico existente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"DOC001\",\n  \"nombre\": \"SOAT Vigente\",\n  \"aplicaA\": \"AM\",\n  \"obligatorio\": \"RR\",\n  \"descripcion\": \"Seguro Obligatorio de Accidentes de Tránsito Actualizado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 19: Eliminar Documento Paramétrico (DELETE /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/documentos/{{idDocumentoCreado}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "documentos",
+                "{{idDocumentoCreado}}"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 2: Función DELETE del CRUD de Documento.\n**Objetivo:** Comprobar la eliminación física del documento paramétrico creado en el Test 14 (`{{idDocumentoCreado}}`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE D: CRUD Completo, Consultas y Reglas de Negocio de Vehículo (E1 - Puntos 1, 3 y 4)",
+      "description": "CRUD completo de Vehículo, validaciones de documentos asociados, sintaxis de placas, restricciones CHECK y las 4 consultas de vehículos.",
+      "item": [
+        {
+          "name": "Test 20: Crear Automóvil Exitoso (POST) - Fuerza estado inicial 'En Verificación'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.id) {",
+                  "    pm.collectionVariables.set('idVehiculoCreado', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1 (25%): Realizar el CRUD de un vehículo, poniendo como estado inicial de los documentos asociados 'En Verificación' al momento de crearlo.\n**Objetivo:** Verificar que el vehículo se registre y que su documento asociado quede automáticamente en estado 'En Verificación'. Guarda el ID en `{{idVehiculoCreado}}`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"GHJ456\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"Chevrolet\",\n  \"modelo\": 2025,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#1D3557\",\n  \"linea\": \"Onix Turbo\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 1\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 21: Rechazar creación de Vehículo sin documentos asociados (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1: No se puede crear un vehículo sin que tenga un documento asociado.\n**Objetivo:** Confirmar que no se permita persistir un vehículo si el arreglo `documentos` está vacío.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ERT456\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"Mazda\",\n  \"modelo\": 2024,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#2B2D42\",\n  \"linea\": \"Mazda 3\",\n  \"documentos\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 22: Rechazar creación por incompatibilidad de aplica_a (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - BD Punto 2.2: Validación de compatibilidad entre el tipo de vehículo y el campo `aplica_a` del documento.\n**Objetivo:** Comprobar que no se pueda asociar un documento exclusivo de Motocicleta (`id: 5`, `aplica_a: 'M'`) a un Automóvil.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"BNM789\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"Mazda\",\n  \"modelo\": 2024,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#2B2D42\",\n  \"linea\": \"Mazda 3\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 5\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 23: Rechazar Automóvil con sintaxis de placa de Motocicleta (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Regla de negocio de sintaxis de placa para Automóvil (3 letras + 3 números).\n**Objetivo:** Verificar que un Automóvil con placa `ABC12D` sea rechazado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ABC12D\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"Mazda\",\n  \"modelo\": 2024,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#2B2D42\",\n  \"linea\": \"Mazda 3\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 1\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 24: Rechazar Motocicleta con sintaxis de placa de Automóvil (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Regla de negocio de sintaxis de placa para Motocicleta (3 letras + 2 números + 1 letra).\n**Objetivo:** Verificar que una Motocicleta con placa `ABC123` sea rechazada.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ABC123\",\n  \"tipoVehiculo\": \"Motocicleta\",\n  \"marca\": \"Yamaha\",\n  \"modelo\": 2024,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 2,\n  \"color\": \"#000000\",\n  \"linea\": \"MT-03\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 1\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 25: Validación de Restricción de Chequeo en Vehículo - tipoVehiculo inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - BD Punto 2.1: Restricciones de chequeo para la tabla vehículo: Tipo de Vehículo (`Automóvil` o `Motocicleta`).\n**Objetivo:** Comprobar que el sistema rechace tipos de vehículo no permitidos como `'Camión'`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"CAM123\",\n  \"tipoVehiculo\": \"Camión\",\n  \"marca\": \"Chevrolet\",\n  \"modelo\": 2024,\n  \"tipoServicio\": \"Pu\",\n  \"tipoCombustible\": \"Disel\",\n  \"capacidadPasajeros\": 3,\n  \"color\": \"#FFFFFF\",\n  \"linea\": \"NHR\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 1\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 26: Validación de Restricción de Chequeo en Vehículo - tipoServicio y tipoCombustible inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - BD Punto 2.1: Restricciones de chequeo para la tabla vehículo: Tipo de Servicios (`Pu`, `Pr`) y Tipo de Combustible (`Gasolina`, `Gas`, `Disel`).\n**Objetivo:** Comprobar que valores fuera de dominio en `tipoServicio` ('Of') o en `tipoCombustible` ('Electrico') sean rechazados con `400 Bad Request`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ZXC123\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"BYD\",\n  \"modelo\": 2025,\n  \"tipoServicio\": \"Of\",\n  \"tipoCombustible\": \"Electrico\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#FFFFFF\",\n  \"linea\": \"Yuan Plus\",\n  \"documentos\": [\n    {\n      \"documento\": {\n        \"id\": 1\n      },\n      \"fechaExpedicion\": \"2026-01-01\",\n      \"fechaVencimiento\": \"2027-01-01\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 27: Listar Todos los Vehículos (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1: Función GET general del CRUD de Vehículo.\n**Objetivo:** Obtener todos los vehículos registrados en el sistema."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 28: Buscar Vehículo por su ID (GET /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1: Función GET individual por ID del CRUD de Vehículo.\n**Objetivo:** Consultar un vehículo específico mediante su clave primaria (`id: 1`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 29: Actualizar Vehículo existente (PUT /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1: Función PUT del CRUD de Vehículo.\n**Objetivo:** Actualizar atributos de un vehículo existente validando las reglas de negocio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ABC123\",\n  \"tipoVehiculo\": \"Automóvil\",\n  \"marca\": \"Toyota\",\n  \"modelo\": 2023,\n  \"tipoServicio\": \"Pr\",\n  \"tipoCombustible\": \"Gasolina\",\n  \"capacidadPasajeros\": 5,\n  \"color\": \"#E63946\",\n  \"linea\": \"Corolla Cross SEG\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 30: Eliminar Vehículo (DELETE /{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/{{idVehiculoCreado}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "{{idVehiculoCreado}}"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 1: Función DELETE del CRUD de Vehículo.\n**Objetivo:** Eliminar por completo el vehículo de prueba creado en el Test 20 (`{{idVehiculoCreado}}`) y sus documentos en cascada."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 31: Consulta 3.1 - Buscar vehículo por número de placa (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/placa/ABC123",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "placa",
+                "ABC123"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 3.1: Buscar vehículo por número de placa.\n**Objetivo:** Localizar un vehículo único utilizando su número de placa en la URL (`ABC123`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 32: Consulta 3.2 - Buscar vehículos por tipo de vehículo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/tipo/Automóvil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "tipo",
+                "Automóvil"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 3.2: Buscar vehículos por tipo de vehículo.\n**Objetivo:** Filtrar y retornar todos los vehículos que pertenezcan al tipo `Automóvil`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 33: Consulta 3.3 - Buscar vehículos que tengan en común un tipo de documento (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/documento/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "documento",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 3.3: Buscar vehículos que tengan en común un tipo de documento.\n**Objetivo:** Obtener todos los vehículos que tengan asociado el documento paramétrico con ID `1` (`SOAT`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 34: Consulta 3.4 - Buscar vehículos según el estado del documento asociado (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/estado-documento/Habilitado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "estado-documento",
+                "Habilitado"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 3.4: Buscar vehículos según el estado del documento asociado al vehículo (`Habilitado`, `Vencido` o `En Verificación`).\n**Objetivo:** Filtrar los vehículos cuyos documentos se encuentren actualmente en estado `Habilitado`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 35: Agregar nuevo documento asociado a un vehículo (POST /{id}/documentos)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/1/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "1",
+                "documentos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - Servicios Punto 4 (20%): Crear un servicio que permita agregar documentos asociados a un vehículo.\n**Objetivo:** Vincular un nuevo documento del catálogo al historial de un vehículo existente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": {\n    \"id\": 2\n  },\n  \"fechaExpedicion\": \"2026-03-01\",\n  \"fechaVencimiento\": \"2027-03-01\",\n  \"estado\": \"Habilitado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 36: Validación de Restricción de Chequeo en Estado del Documento del Vehículo (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/1/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "1",
+                "documentos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 1 - BD Punto 2.3: Restricción de chequeo para el campo Estado del documento asociado al vehículo (`Habilitado`, `Vencido`, `En Verificación`).\n**Objetivo:** Comprobar que el sistema rechace estados de documento no válidos (ej. `'Pendiente'`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": {\n    \"id\": 1\n  },\n  \"fechaExpedicion\": \"2026-03-01\",\n  \"fechaVencimiento\": \"2027-03-01\",\n  \"estado\": \"Pendiente\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE E: Documentos PDF en Base64 y Asignaciones Conductor-Vehículo (E2 - Puntos 4, 5 y 6)",
+      "description": "Cargue masivo/actualización de documentos PDF en Base64 y asociación/cambio de estado de conductores con vehículos.",
+      "item": [
+        {
+          "name": "Test 37: Cargue / Actualización de uno o varios documentos con PDF en Base64 (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/operaciones/documentos/cargar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "operaciones",
+                "documentos",
+                "cargar"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 2.1 y Servicios Punto 4 (20%): Servicio POST que permita el cargue y/o actualización de uno o varios documentos relacionados con los vehículos contemplando un archivo PDF en Base64.\n**Objetivo:** Verificar el procesamiento de un arreglo de documentos almacenando la cadena Base64 del PDF.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"vehiculoId\": 1,\n    \"documentoId\": 3,\n    \"fechaExpedicion\": \"2026-03-01\",\n    \"fechaVencimiento\": \"2027-03-01\",\n    \"estado\": \"Habilitado\",\n    \"documentoPdfBase64\": \"JVBERi0xLjQKJcTl8uXprKWvozMgMCBvYmoKPDwK...\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 38: Asociar Vehículo a un Conductor específico (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/asignaciones/conductor/3/vehiculo/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "asignaciones",
+                "conductor",
+                "3",
+                "vehiculo",
+                "2"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 1.3 y Servicios Punto 5 (5%): Realizar un servicio que permita asociar los vehículos que puede operar un conductor específico.\n**Objetivo:** Crear la relación en `vehiculo_personas` entre un conductor (`tipoPersona: 'C'`) y un vehículo con estado inicial `EA`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoInicial\": \"EA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 39: Rechazar asociación de Vehículo a una Persona que NO es Conductor (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/asignaciones/conductor/6/vehiculo/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "asignaciones",
+                "conductor",
+                "6",
+                "vehiculo",
+                "1"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 1.3: Entidad relación vehículo con persona que tengan como tipo de persona CONDUCTOR.\n**Objetivo:** Comprobar que si se intenta asociar un vehículo a un Administrativo (`id: 6`), el sistema lo rechace.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoInicial\": \"EA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 40: Cambiar el estado del Conductor en relación con el Vehículo a PO (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/asignaciones/2/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "asignaciones",
+                "2",
+                "estado"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 6 (5%): Realizar un servicio que permita cambiar el estado del conductor en relación con el vehículo (`PO`, `EA`, `RO`).\n**Objetivo:** Actualizar el estado de una relación existente a `PO` para autorizar la operación del conductor.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"PO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 41: Validación de Restricción de Chequeo en Estado del Conductor (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/asignaciones/2/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "asignaciones",
+                "2",
+                "estado"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - BD Punto 3.2: Restricción de chequeo sobre el campo de estado del conductor asociado al vehículo (`PO`, `EA`, `RO`).\n**Objetivo:** Verificar que el sistema rechace cualquier código de estado distinto de `PO`, `EA` o `RO` (ej. `'ACTIVO'`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ACTIVO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE F: Los 5 Servicios Públicos sin Token ni APIKey (E2 - Punto 7)",
+      "description": "Consultas públicas de libre acceso que no requieren cabeceras de seguridad.",
+      "item": [
+        {
+          "name": "Test 42: Consulta Pública 1 - Vehículos con documentos vencidos (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/vehiculos/documentos-vencidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "vehiculos",
+                "documentos-vencidos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 7.1: Consultar todos los vehículos que tengan documentos vencidos (sin token).\n**Objetivo:** Obtener sin cabeceras de autenticación la lista de vehículos que tienen al menos un documento vencido."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 43: Consulta Pública 2 - Conductores que pueden operar PO (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/conductores/autorizados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "conductores",
+                "autorizados"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 7.2: Consultar todos los conductores que puedan operar (sin token).\n**Objetivo:** Consultar libremente todos los conductores que tienen estado `PO`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 44: Consulta Pública 3 - Vehículo por placa relacionando Conductores y Documentos (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/vehiculos/placa/ABC123/detalles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "vehiculos",
+                "placa",
+                "ABC123",
+                "detalles"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 7.3: Consultar un vehículo por placa donde se relacione la información de los conductores asociados, así como los documentos (sin token).\n**Objetivo:** Recuperar el detalle integral de un vehículo por su placa junto con sus arreglos de documentos y conductores."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 45: Consulta Pública 4 - Vehículos con documentos por vencer según parámetro de tiempo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/vehiculos/documentos-por-vencer?diasFaltantes=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "vehiculos",
+                "documentos-por-vencer"
+              ],
+              "query": [
+                {
+                  "key": "diasFaltantes",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 7.4: Consultar los vehículos que tienen documentos por vencer con un tiempo que se especifique como parámetro en la consulta (sin token).\n**Objetivo:** Filtrar los vehículos cuyos documentos vencen dentro de los próximos N días indicados en `diasFaltantes`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 46: Consulta Pública 5 - Total de personas agrupadas por tipo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/personas/agrupadas-por-tipo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "personas",
+                "agrupadas-por-tipo"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 2 - Servicios Punto 7.5: Consultar el total de las personas agrupadas por tipo (sin token).\n**Objetivo:** Obtener el conteo estadístico de personas agrupadas por tipo (`A` y `C`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE G: Entidad Trayecto, Reglas de Creación y 4 Consultas de Rutas (E3 - BD y API)",
+      "description": "Validación de precondiciones al crear un Trayecto y ejecución de las 4 consultas protegidas de rutas.",
+      "item": [
+        {
+          "name": "Test 47: Rechazo al crear Trayecto - Conductor en estado EA (No está en PO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 1.1: La creación de un trayecto debe estar condicionada a que el conductor asociado pueda operar `PO`.\n**Objetivo:** Comprobar que un conductor en estado `EA` (`id: 4`) no pueda registrar trayectos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona\": {\n    \"id\": 4\n  },\n  \"vehiculo\": {\n    \"id\": 2\n  },\n  \"codigoRuta\": \"RUTA-FAIL-EA\",\n  \"ubicacion\": \"Parque Manuel Murillo Toro, Ibagué\",\n  \"ordenParada\": 0,\n  \"login\": \"cg1001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 48: Rechazo al crear Trayecto - Conductor en estado RO (Restringido para Operar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 1.1: Bloqueo de creación de trayectos para conductores en estado `RO`.\n**Objetivo:** Verificar que un conductor restringido (`RO`, `id: 7`) sea rechazado al intentar asignarle un trayecto.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona\": {\n    \"id\": 7\n  },\n  \"vehiculo\": {\n    \"id\": 1\n  },\n  \"codigoRuta\": \"RUTA-FAIL-RO\",\n  \"ubicacion\": \"Terminal de Transportes, Ibagué\",\n  \"ordenParada\": 0,\n  \"login\": \"cg1001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 49: Rechazo al crear Trayecto - Vehículo con documentos NO Habilitados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 1.1: La creación de un trayecto debe estar condicionada a que la relación de los documentos con el vehículo estén en estado `Habilitado`.\n**Objetivo:** Confirmar que no se permita registrar trayectos en vehículos cuyos documentos estén en verificación (`id: 6`) o vencidos (`id: 5`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona\": {\n    \"id\": 3\n  },\n  \"vehiculo\": {\n    \"id\": 6\n  },\n  \"codigoRuta\": \"RUTA-FAIL-DOCS\",\n  \"ubicacion\": \"Centro Comercial La Estación, Ibagué\",\n  \"ordenParada\": 0,\n  \"login\": \"cg1001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 50: Rechazo al crear Trayecto - Persona asociada es Administrativo ('A') y no Conductor ('C')",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 1.1: `idpersona` solo debe permitir asociaciones de personas de tipo conductor.\n**Objetivo:** Comprobar que el sistema impida registrar un trayecto si la persona enviada tiene rol Administrativo (`id: 6`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona\": {\n    \"id\": 6\n  },\n  \"vehiculo\": {\n    \"id\": 1\n  },\n  \"codigoRuta\": \"RUTA-FAIL-ADMIN\",\n  \"ubicacion\": \"Conservatorio del Tolima, Ibagué\",\n  \"ordenParada\": 0,\n  \"login\": \"cg1001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 51: Crear Trayecto Exitoso cumpliendo todas las condiciones (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - BD Punto 1.1: Creación exitosa de trayecto con conductor `'C'` en estado `'PO'` y vehículo con todos sus documentos en `'Habilitado'`.\n**Objetivo:** Registrar satisfactoriamente una parada de ruta y verificar su persistencia.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona\": {\n    \"id\": 5\n  },\n  \"vehiculo\": {\n    \"id\": 2\n  },\n  \"codigoRuta\": \"RUTA-EXPRESS-03\",\n  \"ubicacion\": \"Plaza de Bolívar, Ibagué, Tolima\",\n  \"ordenParada\": 0,\n  \"login\": \"cg1001234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 52: Servicio 1 (E3) - Consultar ruta por codigoRuta visualizando trayectos en orden (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/ruta/RUTA-IBG-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "ruta",
+                "RUTA-IBG-01"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Servicios Punto 1 (25%): Consultar rutas teniendo como parámetro el código de ruta (protegido con token) y visualizar en orden los trayectos y su información asociada.\n**Objetivo:** Obtener la secuencia ordenada de paradas (`ordenParada: 0, 1, 2...`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 53: Servicio 2 (E3) - Consultar códigos de ruta agrupados por identificación de conductor (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/conductor/1020304050",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "conductor",
+                "1020304050"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Servicios Punto 2 (25%): Consultar por número de identificación de un conductor donde se visualicen únicamente los códigos de rutas de forma agrupada (requiere token).\n**Objetivo:** Verificar que se retornen únicamente los strings de los códigos de ruta sin duplicados (`DISTINCT`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 54: Servicio 3 (E3) - Consultar código de ruta y conductor agrupados por placa de vehículo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/vehiculo/KLU456",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "vehiculo",
+                "KLU456"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Servicios Punto 3 (25%): Consultar por placa de un vehículo donde se visualice el código de ruta y el conductor asociado al trayecto de forma agrupada (requiere token).\n**Objetivo:** Comprobar la obtención agrupada del código de ruta y los datos del conductor para la placa `KLU456`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 55: Servicio 4 (E3) - Consultar rutas y trayectos donde el vehículo NO esté habilitado o el conductor esté en RO (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/no-operables",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "no-operables"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Servicios Punto 4 (25%): Consultar las rutas y la información de los trayectos donde el vehículo NO esté habilitado o el conductor esté Restringido para Operar.\n**Objetivo:** Detectar y listar cualquier ruta registrada cuyo vehículo tenga documentos vencidos/en verificación o cuyo conductor haya pasado a estado `RO`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE H: Pruebas de las 3 Tareas Programadas @Scheduled (E3 - Técnicos 25%)",
+      "description": "Verificación de las 3 tareas programadas automáticas: Licencias vencidas -> RO (cada 2 min), Documentos vencidos -> Vencido (cada 2 min) y Geocodificación Google Maps (cada 90 seg).",
+      "item": [
+        {
+          "name": "Test 56 (Paso 1): Simular licencia vencida en Conductor (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personas/5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "personas",
+                "5"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Técnicos Punto 1.1 (30%): Tarea programada cada 2 minutos que verifica la vigencia de las licencias y cambia el estado del conductor a `RO`.\n**Objetivo (Paso 1):** Asignar una fecha de licencia vencida (`2020-01-01`) a la conductora Luisa Morales (`id: 5`) y esperar 2 minutos antes de ejecutar el Paso 2.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"1040506070\",\n  \"tipoIdentificacion\": \"CC\",\n  \"nombres\": \"Luisa\",\n  \"apellidos\": \"Morales\",\n  \"correo\": \"luisa.morales@conductores.com\",\n  \"tipoPersona\": \"C\",\n  \"fechaVigenciaLicencia\": \"2020-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 56 (Paso 2): Verificar paso automático a RO en rutas no operables tras 2 min (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/no-operables",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "no-operables"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Técnicos Punto 1.1 (30%).\n**Objetivo (Paso 2):** Comprobar pasados 2 minutos que la tarea `@Scheduled` detectó la licencia vencida y cambió la relación de la conductora a `RO`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 57 (Paso 1): Cargar documento con fecha de vencimiento pasada en estado Habilitado (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/operaciones/documentos/cargar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "operaciones",
+                "documentos",
+                "cargar"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Técnicos Punto 1.2 (30%): Tarea programada cada 2 minutos que verifica la fecha de vigencia de los documentos asociados al vehículo y los cambia a `Vencido`.\n**Objetivo (Paso 1):** Cargar un documento con fecha pasada (`2024-01-01`) en estado `Habilitado` para el vehículo `id: 7` y esperar 2 minutos.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"vehiculoId\": 7,\n    \"documentoId\": 1,\n    \"fechaExpedicion\": \"2023-01-01\",\n    \"fechaVencimiento\": \"2024-01-01\",\n    \"estado\": \"Habilitado\",\n    \"documentoPdfBase64\": \"JVBERi0xLjQK...\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 57 (Paso 2): Verificar cambio automático del documento a 'Vencido' tras 2 min (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehiculos/7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "7"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Técnicos Punto 1.2 (30%).\n**Objetivo (Paso 2):** Consultar el vehículo `id: 7` tras 2 minutos y verificar que el documento pasó automáticamente a `'estado': 'Vencido'`."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 58: Tarea Programada 1.3 (Cada 90 seg) - Verificar Geocodificación automática con Google Maps (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trayectos/ruta/RUTA-EXPRESS-03",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trayectos",
+                "ruta",
+                "RUTA-EXPRESS-03"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 3 - Técnicos Punto 1.3 (40%): Tarea programada cada 90 segundos que verifica los trayectos sin longitud y latitud y los extrae del API externa Google Maps.\n**Objetivo:** Confirmar que el trayecto creado en el Test 51 para `'Plaza de Bolívar, Ibagué, Tolima'` ya tiene sus coordenadas reales `latitud` y `longitud` persistidas."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BLOQUE I: Cargue Masivo de Trayectos vía Excel y Procedimientos Almacenados (E4 - 100%)",
+      "description": "Pruebas de los 2 servicios de la Entrega 4: Cargue masivo de plantilla Excel invocando los 3 Procedimientos Almacenados (CARGUE, VALIDACION, PROCESADO) y consulta de auditoría por idCargue.",
+      "item": [
+        {
+          "name": "Test 59: Servicio 1 (E4) - Cargue Masivo de Plantilla Excel e Invocación de los 3 Procedimientos Almacenados (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.idCargue) {",
+                  "    pm.collectionVariables.set('idCargue', jsonData.idCargue);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargue-masivo/trayectos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargue-masivo",
+                "trayectos"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 4 - BD (60%) y API Punto 1 (80%): Entidad `trayecto_tmp`, procedimientos almacenados `CARGAR_TRAYECTOS_EXCEL`, `VALIDAR_TRAYECTOS_CARGUE`, `PROCESAR_TRAYECTOS_EXCEL` y servicio MultipartFile.\n**Objetivo:** Subir el archivo `Plantilla_Cargue_Trayectos_Ibague.xlsx` (20 filas) y comprobar que procese 15 registros exitosos y detecte 5 con error. Guarda el `idCargue` en `{{idCargue}}`.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "d:/ProyectoFinal_PPOOII/proyecto/Plantilla_Cargue_Trayectos_Ibague.xlsx",
+                  "description": "Plantilla Excel con 20 trayectos de Ibagué (15 válidos y 5 con errores de negocio)"
+                },
+                {
+                  "key": "login",
+                  "value": "cg1001234567",
+                  "type": "text",
+                  "description": "Login del usuario administrador que realiza el cargue"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test 60: Servicio 2 (E4) - Consulta de Cargues Realizados por Identificador de Cargue idCargue (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código de estado esperado es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargue-masivo/trayectos/{{idCargue}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargue-masivo",
+                "trayectos",
+                "{{idCargue}}"
+              ]
+            },
+            "description": "**Requerimiento:** Entrega 4 - Servicios Punto 2 (20%): Crear un servicio de consulta de los cargues realizados teniendo como parámetro el identificador de cargue.\n**Objetivo:** Consultar la trazabilidad completa del lote `{{idCargue}}` generado en el Test 59, verificando los estados (`PROCESADO` / `ERROR`) y las observaciones detalladas."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
