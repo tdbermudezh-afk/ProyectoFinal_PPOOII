@@ -10,7 +10,7 @@ public class Usuario {
     private UsuarioPK id;
 
     @MapsId("idPersona")
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "idpersona", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Persona persona;
