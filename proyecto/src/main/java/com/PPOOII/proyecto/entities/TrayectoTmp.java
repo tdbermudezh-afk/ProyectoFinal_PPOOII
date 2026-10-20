@@ -3,11 +3,13 @@ package com.PPOOII.proyecto.entities;
 
 // Importaciones de Jakarta Persistence
 import jakarta.persistence.*;
+import org.hibernate.annotations.Check;
 import java.io.Serializable;
 
 // Declaración de entidad mapeada a la tabla temporal 'trayecto_tmp'
 @Entity
 @Table(name = "trayecto_tmp")
+@Check(constraints = "estado IN ('CARGADO', 'VALIDADO', 'PROCESADO', 'ERROR')")
 public class TrayectoTmp implements Serializable {
 
     // Identificador único de serialización
@@ -50,9 +52,9 @@ public class TrayectoTmp implements Serializable {
     @Column(name = "login", length = 100)
     private String login;
 
-    // Identificador del lote de cargue (ej. 202610170130)
+    // Identificador del lote de cargue en formato numérico yyyyMMddHHmm (ej. 202610170130)
     @Column(name = "id_cargue", nullable = false)
-    private Double idCargue;
+    private Long idCargue;
 
     // Estado del ciclo de cargue: CARGADO, VALIDADO, PROCESADO o ERROR
     @Column(name = "estado", nullable = false, length = 15)
@@ -68,7 +70,7 @@ public class TrayectoTmp implements Serializable {
     // Constructor parametrizado para facilitar inserciones
     public TrayectoTmp(String idpersonaTxt, String idvehiculoTxt, String codigoRuta, 
                        String ubicacion, String ordenParadaTxt, String latitudTxt, 
-                       String longitudTxt, String login, Double idCargue) {
+                       String longitudTxt, String login, Long idCargue) {
         this.idpersonaTxt = idpersonaTxt;
         this.idvehiculoTxt = idvehiculoTxt;
         this.codigoRuta = codigoRuta;
@@ -110,8 +112,8 @@ public class TrayectoTmp implements Serializable {
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }
 
-    public Double getIdCargue() { return idCargue; }
-    public void setIdCargue(Double idCargue) { this.idCargue = idCargue; }
+    public Long getIdCargue() { return idCargue; }
+    public void setIdCargue(Long idCargue) { this.idCargue = idCargue; }
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
@@ -119,4 +121,3 @@ public class TrayectoTmp implements Serializable {
     public String getObservacion() { return observacion; }
     public void setObservacion(String observacion) { this.observacion = observacion; }
 }
-

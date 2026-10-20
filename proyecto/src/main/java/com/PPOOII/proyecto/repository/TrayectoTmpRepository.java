@@ -4,6 +4,7 @@ package com.PPOOII.proyecto.repository;
 // Importaciones de la entidad TrayectoTmp y utilidades de JPA
 import com.PPOOII.proyecto.entities.TrayectoTmp;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,21 +26,24 @@ public interface TrayectoTmpRepository extends JpaRepository<TrayectoTmp, Long> 
             @Param("p_latitud_txt") String latitudTxt,
             @Param("p_longitud_txt") String longitudTxt,
             @Param("p_login") String login,
-            @Param("p_id_cargue") Double idCargue
+            @Param("p_id_cargue") Long idCargue
     );
 
     // Procedimiento 2: Validación acumulativa de reglas de negocio para el lote de cargue
     @Procedure(procedureName = "VALIDAR_TRAYECTOS_CARGUE")
-    void VALIDAR_TRAYECTOS_CARGUE(@Param("p_id_cargue") Double idCargue);
+    void VALIDAR_TRAYECTOS_CARGUE(@Param("p_id_cargue") Long idCargue);
 
     // Procedimiento 3: Traslado de registros validados a la tabla transaccional definitiva 'trayecto'
     @Procedure(procedureName = "PROCESAR_TRAYECTOS_EXCEL")
-    void PROCESAR_TRAYECTOS_EXCEL(@Param("p_id_cargue") Double idCargue);
+    void PROCESAR_TRAYECTOS_EXCEL(@Param("p_id_cargue") Long idCargue);
 
     // Consulta de registros temporales según el identificador de cargue
-    List<TrayectoTmp> findByIdCargueOrderByIdAsc(Double idCargue);
+    List<TrayectoTmp> findByIdCargueOrderByIdAsc(Long idCargue);
 
     // Conteo de registros por estado para un identificador de cargue específico
-    long countByIdCargueAndEstado(Double idCargue, String estado);
-}
+    long countByIdCargueAndEstado(Long idCargue, String estado);
 
+    // Obtiene la lista de identificadores de cargue distintos ordenados del más reciente al más antiguo
+    @Query("SELECT DISTINCT t.idCargue FROM TrayectoTmp t WHERE t.idCargue IS NOT NULL ORDER BY t.idCargue DESC")
+    List<Long> findDistinctIdCargueDesc();
+}

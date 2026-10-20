@@ -1,147 +1,296 @@
-package com.PPOOII.proyecto.services; // Define el paquete de servicios del proyecto
+// Paquete de servicios de lógica de negocio de la aplicación
+package com.PPOOII.proyecto.services;
 
-import com.PPOOII.proyecto.entities.Persona; // Importa la entidad Persona
-import com.PPOOII.proyecto.entities.Usuario; // Importa la entidad Usuario
-import com.PPOOII.proyecto.entities.UsuarioPK; // Importa la llave primaria compuesta UsuarioPK
-import com.PPOOII.proyecto.repository.PersonaRepository; // Importa el repositorio de Persona
-import com.PPOOII.proyecto.repository.UsuarioRepository; // Importa el repositorio de Usuario
-import org.springframework.beans.factory.annotation.Autowired; // Importa la anotación para inyección de dependencias
-import org.springframework.stereotype.Service; // Importa la anotación que marca la clase como un servicio de Spring
-import org.springframework.transaction.annotation.Transactional; // Importa la anotación para manejo transaccional
+// Importación de la entidad Persona
+import com.PPOOII.proyecto.entities.Persona;
+// Importación de la entidad Usuario
+import com.PPOOII.proyecto.entities.Usuario;
+// Importación de la llave primaria compuesta UsuarioPK
+import com.PPOOII.proyecto.entities.UsuarioPK;
+// Importación de excepción personalizada ResourceNotFoundException
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
+// Importación del repositorio JPA de Persona
+import com.PPOOII.proyecto.repository.PersonaRepository;
+// Importación del repositorio JPA de Usuario
+import com.PPOOII.proyecto.repository.UsuarioRepository;
+// Importación de la interfaz de servicio IPersonaService (Laboratorio 1)
+import com.PPOOII.proyecto.services.Interfaces.IPersonaService;
+// Importación del gestor de logs Log4j2 (Laboratorio 1)
+import org.apache.logging.log4j.LogManager;
+// Importación de la interfaz Logger de Log4j2 (Laboratorio 1)
+import org.apache.logging.log4j.Logger;
+// Importación de la anotación @Autowired para inyección de dependencias
+import org.springframework.beans.factory.annotation.Autowired;
+// Importación de la anotación @Service de Spring
+import org.springframework.stereotype.Service;
+// Importación de la anotación @Transactional para manejo transaccional
+import org.springframework.transaction.annotation.Transactional;
+// Importación de MultipartFile para carga de archivos PDF
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List; // Importa la interfaz List
-import java.util.UUID; // Importa la clase UUID para generación de contraseñas y APIKeys
+// Importación de IOException para lectura de bytes del PDF
+import java.io.IOException;
+// Importación de LocalDate para fecha de vigencia de licencia
+import java.time.LocalDate;
+// Importación de Base64 para codificar PDF a Base64
+import java.util.Base64;
+// Importación de HashMap para mapas de estadísticas
+import java.util.HashMap;
+// Importación de la estructura List de Java
+import java.util.List;
+// Importación de la interfaz Map de Java
+import java.util.Map;
+// Importación del generador de identificadores únicos UUID
+import java.util.UUID;
 
-@Service // Registra la clase como un componente de servicio de Spring
-public class PersonaService { // Declaración de la clase PersonaService
+// Componente de servicio que implementa IPersonaService para la gestión de Personas (Conductores y Administrativos)
+@Service("PersonaService")
+public class PersonaService implements IPersonaService {
 
-    @Autowired // Inyecta automáticamente el repositorio de personas
-    private PersonaRepository personaRepository; // Instancia de PersonaRepository
+    // Instancia del logger de auditoría según el estándar del Laboratorio 1
+    private static final Logger logger = LogManager.getLogger(PersonaService.class);
 
-    @Autowired // Inyecta automáticamente el repositorio de usuarios
-    private UsuarioRepository usuarioRepository; // Instancia de UsuarioRepository
+    // Inyección del repositorio JPA de Personas
+    @Autowired
+    private PersonaRepository personaRepository;
 
-    @Transactional // Ejecuta la creación dentro de una transacción de base de datos
-    public Persona crearPersona(Persona persona) { // Método para registrar una nueva persona en el sistema
-        if (personaRepository.existsByIdentificacion(persona.getIdentificacion())) { // Verifica si ya existe una persona con esa identificación
-            throw new IllegalArgumentException("Ya existe una persona registrada con la identificación: " + persona.getIdentificacion()); // Lanza error 400 si está duplicada
-        } // Fin de validación de identificación única
+    // Inyección del repositorio JPA de Usuarios
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-        if (personaRepository.existsByCorreo(persona.getCorreo())) { // Verifica si ya existe una persona con ese correo electrónico
-            throw new IllegalArgumentException("Ya existe una persona registrada con el correo: " + persona.getCorreo()); // Lanza error 400 si el correo está duplicado
-        } // Fin de validación de correo único
+    // Registra una nueva persona y, si es Administrativa ('A'), genera automáticamente su Usuario
+    @Override
+    @Transactional
+    public Persona crearPersona(Persona persona) {
+        // Verifica que el número de identificación no esté duplicado
+        if (personaRepository.existsByIdentificacion(persona.getIdentificacion())) {
+            // Lanza excepción si la identificación ya existe
+            throw new IllegalArgumentException("Ya existe una persona registrada con la identificación: " + persona.getIdentificacion());
+        }
 
-        // Si la persona es de tipo CONDUCTOR ('C'), exigir el documento PDF de licencia en Base64 y su fecha de vigencia (Entrega 3 - BD 2.1)
-        if ("C".equalsIgnoreCase(persona.getTipoPersona())) { // Comprueba si el rol de la persona es Conductor ('C')
-            if (persona.getLicenciaConduccion() == null || persona.getLicenciaConduccion().isBlank()) { // Verifica si no se envió el archivo de licencia en Base64
-                throw new IllegalArgumentException("Para una persona de tipo CONDUCTOR ('C'), el documento de licencia de conducción en formato Base64 ('licenciaConduccion') es obligatorio."); // Lanza error 400 indicando que falta el documento
-            } // Fin de validación de licencia en Base64
-            if (persona.getFechaVigenciaLicencia() == null) { // Verifica si no se envió la fecha de vigencia de la licencia
-                throw new IllegalArgumentException("Para una persona de tipo CONDUCTOR ('C'), la fecha de vigencia de la licencia ('fechaVigenciaLicencia') es obligatoria."); // Lanza error 400 indicando que falta la fecha de vigencia
-            } // Fin de validación de fecha de vigencia
-        } else if ("A".equalsIgnoreCase(persona.getTipoPersona())) { // Si la persona es de tipo ADMINISTRATIVO ('A')
-            persona.setLicenciaConduccion(null); // Asegura que no almacene licencia de conducción ya que solo aplica a conductores
-            persona.setFechaVigenciaLicencia(null); // Asegura que no almacene fecha de vigencia de licencia
-        } // Fin de validación según tipo de persona
+        // Verifica que el correo electrónico no esté duplicado
+        if (personaRepository.existsByCorreo(persona.getCorreo())) {
+            // Lanza excepción si el correo ya existe
+            throw new IllegalArgumentException("Ya existe una persona registrada con el correo: " + persona.getCorreo());
+        }
 
-        Persona personaGuardada = personaRepository.save(persona); // Guarda la entidad Persona en la base de datos
+        // Regla de negocio: Si la persona es de tipo CONDUCTOR ('C'), debe adjuntar su licencia de conducción en PDF Base64
+        if ("C".equalsIgnoreCase(persona.getTipoPersona())) {
+            // Verifica que el campo licenciaConduccion no sea nulo ni esté vacío
+            if (persona.getLicenciaConduccion() == null || persona.getLicenciaConduccion().trim().isEmpty()) {
+                // Lanza excepción indicando que la licencia de conducción en PDF Base64 es obligatoria para conductores
+                throw new IllegalArgumentException("Para las personas de tipo CONDUCTOR (C) es obligatorio adjuntar la licencia de conducción en formato PDF Base64 ('licenciaConduccion').");
+            }
+        }
+
+        // Persiste la entidad Persona en la base de datos
+        Persona personaGuardada = personaRepository.save(persona);
+        // Registra en el log la creación de la persona
+        logger.info("Persona creada exitosamente con ID: {} y tipo: {}", personaGuardada.getId(), personaGuardada.getTipoPersona());
 
         // Regla: Si la persona es de tipo ADMINISTRATIVO ('A'), se genera automáticamente su Usuario
-        if ("A".equalsIgnoreCase(persona.getTipoPersona())) { // Verifica si es Administrativo para autogenerar su cuenta de usuario
-            Usuario usuario = generarUsuarioParaAdministrativo(personaGuardada); // Crea el usuario con login por nemotecnia, password y APIKey
-            personaGuardada.setUsuarioGenerado(usuario); // Adjunta el usuario generado a la respuesta transitoria
-        } // Fin de autogeneración de usuario
+        if ("A".equalsIgnoreCase(persona.getTipoPersona())) {
+            // Genera y guarda las credenciales del usuario administrativo
+            Usuario usuario = generarUsuarioParaAdministrativo(personaGuardada);
+            // Asocia el usuario generado al campo transiente de respuesta JSON
+            personaGuardada.setUsuarioGenerado(usuario);
+        }
 
-        return personaGuardada; // Retorna la persona creada
-    } // Fin del método crearPersona
+        // Retorna la persona guardada (con su usuarioGenerado si aplica)
+        return personaGuardada;
+    }
 
-    private Usuario generarUsuarioParaAdministrativo(Persona persona) { // Método auxiliar para generar el Usuario de un Administrativo
-        // Nemotecnia: Primera letra del nombre + primera letra del apellido + identificación
-        String primeraLetraNombre = persona.getNombres().trim().substring(0, 1).toLowerCase(); // Extrae la primera letra del nombre en minúscula
-        String primeraLetraApellido = persona.getApellidos().trim().substring(0, 1).toLowerCase(); // Extrae la primera letra del apellido en minúscula
-        String loginNemotecnico = primeraLetraNombre + primeraLetraApellido + persona.getIdentificacion(); // Concatena la nemotecnia del login
+    // Método auxiliar que construye el login nemotécnico, password y APIKey para un usuario administrativo
+    private Usuario generarUsuarioParaAdministrativo(Persona persona) {
+        // Verifica si la persona ya tiene un usuario asignado (relación 1:1 estricta)
+        var existente = usuarioRepository.findByIdIdPersona(persona.getId());
+        if (existente.isPresent()) {
+            return existente.get();
+        }
 
-        // Generación automática de contraseña y APIKey aleatoria
-        String passwordGenerado = "Pwd" + UUID.randomUUID().toString().substring(0, 8); // Genera una contraseña aleatoria segura
-        String apiKeyGenerada = UUID.randomUUID().toString(); // Genera un UUID único como APIKey
+        // Nemotecnia: Primera letra del primer nombre + primera letra del primer apellido + identificación
+        String primeraLetraNombre = persona.getNombres().trim().substring(0, 1).toLowerCase();
+        // Obtiene la primera letra del primer apellido en minúscula
+        String primeraLetraApellido = persona.getApellidos().trim().substring(0, 1).toLowerCase();
+        // Concatena las iniciales con el número de identificación
+        String loginNemotecnico = primeraLetraNombre + primeraLetraApellido + persona.getIdentificacion().trim();
 
-        UsuarioPK usuarioPK = new UsuarioPK(persona.getId(), loginNemotecnico); // Construye la llave primaria compuesta (idpersona, login)
+        // Generación automática de contraseña aleatoria con prefijo Pwd
+        String passwordGenerado = "Pwd" + UUID.randomUUID().toString().substring(0, 8);
+        // Generación automática de llave APIKey única mediante UUID
+        String apiKeyGenerada = UUID.randomUUID().toString();
 
-        Usuario usuario = new Usuario(); // Instancia la entidad Usuario
-        usuario.setId(usuarioPK); // Asigna la llave primaria compuesta
-        usuario.setPersona(persona); // Asocia la referencia a la entidad Persona
-        usuario.setPassword(passwordGenerado); // Asigna la contraseña generada automáticamente
-        usuario.setApikey(apiKeyGenerada); // Asigna la APIKey generada automáticamente
+        // Construye la llave primaria compuesta (id de persona + login nemotécnico)
+        UsuarioPK usuarioPK = new UsuarioPK(persona.getId(), loginNemotecnico);
 
-        return usuarioRepository.save(usuario); // Persiste y retorna el nuevo Usuario en la base de datos
-    } // Fin del método generarUsuarioParaAdministrativo
+        // Crea la instancia de la entidad Usuario
+        Usuario usuario = new Usuario();
+        // Asigna la llave primaria compuesta
+        usuario.setId(usuarioPK);
+        // Vincula la referencia a la entidad Persona
+        usuario.setPersona(persona);
+        // Asigna la contraseña generada
+        usuario.setPassword(passwordGenerado);
+        // Asigna la APIKey generada
+        usuario.setApikey(apiKeyGenerada);
 
-    @Transactional // Ejecuta la actualización dentro de una transacción de base de datos
-    public Persona actualizarPersona(Long id, Persona detalles) { // Método para actualizar los datos de una persona existente
-        Persona persona = obtenerPorId(id); // Busca la persona por su ID o lanza excepción si no existe
+        // Registra en el log la generación automática del usuario administrativo
+        logger.info("Usuario administrativo generado automáticamente con login: {}", loginNemotecnico);
+        // Persiste y retorna el nuevo usuario
+        return usuarioRepository.save(usuario);
+    }
 
-        if (detalles.getIdentificacion() != null && !detalles.getIdentificacion().equals(persona.getIdentificacion())) { // Si cambió el número de identificación
-            if (personaRepository.existsByIdentificacion(detalles.getIdentificacion())) { // Verifica que la nueva identificación no pertenezca a otra persona
-                throw new IllegalArgumentException("Ya existe una persona registrada con la identificación: " + detalles.getIdentificacion()); // Lanza error 400 si ya existe
-            } // Fin de verificación de duplicado
-            persona.setIdentificacion(detalles.getIdentificacion()); // Actualiza la identificación
-        } // Fin de actualización de identificación
+    // Vincula el usuario generado en el campo transiente si la persona es de tipo Administrativo ('A')
+    private void adjuntarUsuarioSiEsAdministrativo(Persona persona) {
+        if (persona != null && "A".equalsIgnoreCase(persona.getTipoPersona()) && persona.getUsuarioGenerado() == null) {
+            usuarioRepository.findByIdIdPersona(persona.getId()).ifPresent(persona::setUsuarioGenerado);
+        }
+    }
 
-        if (detalles.getCorreo() != null && !detalles.getCorreo().equalsIgnoreCase(persona.getCorreo())) { // Si cambió el correo electrónico
-            if (personaRepository.existsByCorreo(detalles.getCorreo())) { // Verifica que el nuevo correo no esté registrado por otra persona
-                throw new IllegalArgumentException("Ya existe una persona registrada con el correo: " + detalles.getCorreo()); // Lanza error 400 si ya existe
-            } // Fin de verificación de duplicado
-            persona.setCorreo(detalles.getCorreo()); // Actualiza el correo electrónico
-        } // Fin de actualización de correo
+    // Actualiza la información de una persona existente por su ID
+    @Override
+    @Transactional
+    public Persona actualizarPersona(Long id, Persona detalles) {
+        // Recupera la persona actual o lanza excepción si no existe
+        Persona persona = obtenerPorId(id);
 
-        if (detalles.getNombres() != null) persona.setNombres(detalles.getNombres()); // Actualiza los nombres si fueron enviados
-        if (detalles.getApellidos() != null) persona.setApellidos(detalles.getApellidos()); // Actualiza los apellidos si fueron enviados
-        if (detalles.getTipoIdentificacion() != null) persona.setTipoIdentificacion(detalles.getTipoIdentificacion()); // Actualiza el tipo de identificación si fue enviado
+        // Si la identificación cambia, verifica que no esté registrada en otra persona
+        if (detalles.getIdentificacion() != null && !detalles.getIdentificacion().equals(persona.getIdentificacion())) {
+            // Comprueba unicidad de la nueva identificación
+            if (personaRepository.existsByIdentificacion(detalles.getIdentificacion())) {
+                // Lanza excepción por identificación duplicada
+                throw new IllegalArgumentException("Ya existe una persona registrada con la identificación: " + detalles.getIdentificacion());
+            }
+            // Actualiza el número de identificación
+            persona.setIdentificacion(detalles.getIdentificacion());
+        }
 
-        // Actualizar campos de licencia de conducción si fueron enviados en el cuerpo JSON (Entrega 3 - BD 2.1)
-        if (detalles.getLicenciaConduccion() != null) { // Si se envió el campo licenciaConduccion en el JSON
-            if (detalles.getLicenciaConduccion().isBlank()) { // Si se envió vacío en blanco ("")
-                throw new IllegalArgumentException("El documento de licencia de conducción en formato Base64 ('licenciaConduccion') no puede estar vacío."); // Lanza error 400
-            } // Fin de validación de cadena vacía
-            persona.setLicenciaConduccion(detalles.getLicenciaConduccion().trim()); // Actualiza el soporte de licencia en Base64
-        } // Fin de actualización de licenciaConduccion
-        if (detalles.getFechaVigenciaLicencia() != null) { // Si se envió la fecha de vigencia de la licencia
-            persona.setFechaVigenciaLicencia(detalles.getFechaVigenciaLicencia()); // Actualiza la fecha de vigencia de la licencia
-        } // Fin de actualización de fechaVigenciaLicencia
+        // Si el correo cambia, verifica que no esté registrado en otra persona
+        if (detalles.getCorreo() != null && !detalles.getCorreo().equalsIgnoreCase(persona.getCorreo())) {
+            // Comprueba unicidad del nuevo correo electrónico
+            if (personaRepository.existsByCorreo(detalles.getCorreo())) {
+                // Lanza excepción por correo duplicado
+                throw new IllegalArgumentException("Ya existe una persona registrada con el correo: " + detalles.getCorreo());
+            }
+            // Actualiza el correo electrónico
+            persona.setCorreo(detalles.getCorreo());
+        }
+
+        // Actualiza los nombres si fueron proporcionados
+        if (detalles.getNombres() != null) persona.setNombres(detalles.getNombres());
+        // Actualiza los apellidos si fueron proporcionados
+        if (detalles.getApellidos() != null) persona.setApellidos(detalles.getApellidos());
+        // Actualiza el tipo de identificación si fue proporcionado
+        if (detalles.getTipoIdentificacion() != null) persona.setTipoIdentificacion(detalles.getTipoIdentificacion());
+        // Actualiza el PDF Base64 de la licencia de conducción si fue proporcionado
+        if (detalles.getLicenciaConduccion() != null) persona.setLicenciaConduccion(detalles.getLicenciaConduccion());
+        // Actualiza la fecha de vigencia de la licencia de conducción si fue proporcionada
+        if (detalles.getFechaVigenciaLicencia() != null) persona.setFechaVigenciaLicencia(detalles.getFechaVigenciaLicencia());
 
         // Si cambia a administrativo, generar usuario si aún no tiene
-        if ("A".equalsIgnoreCase(detalles.getTipoPersona()) && !"A".equalsIgnoreCase(persona.getTipoPersona())) { // Si pasa de Conductor a Administrativo
-            persona.setTipoPersona("A"); // Cambia el tipo de persona a Administrativo ('A')
-            persona.setLicenciaConduccion(null); // Limpia el campo de licencia porque solo aplica a Conductores
-            persona.setFechaVigenciaLicencia(null); // Limpia la fecha de vigencia de licencia
-            Persona personaActualizada = personaRepository.save(persona); // Guarda los cambios de la persona
-            Usuario usuario = generarUsuarioParaAdministrativo(personaActualizada); // Genera su nuevo usuario administrativo
-            personaActualizada.setUsuarioGenerado(usuario); // Adjunta el usuario generado
-            return personaActualizada; // Retorna la persona actualizada
-        } else if (detalles.getTipoPersona() != null) { // Si se mantiene el mismo tipo o se actualiza a Conductor ('C')
-            persona.setTipoPersona(detalles.getTipoPersona()); // Asigna el tipo de persona
-        } // Fin de manejo de cambio de tipoPersona
+        if ("A".equalsIgnoreCase(detalles.getTipoPersona()) && !"A".equalsIgnoreCase(persona.getTipoPersona())) {
+            // Actualiza el tipo de persona a Administrativo ('A')
+            persona.setTipoPersona("A");
+            // Guarda los cambios de la persona
+            Persona personaActualizada = personaRepository.save(persona);
+            // Genera automáticamente su usuario administrativo
+            Usuario usuario = generarUsuarioParaAdministrativo(personaActualizada);
+            // Asigna el usuario generado a la respuesta
+            personaActualizada.setUsuarioGenerado(usuario);
+            // Retorna la persona actualizada con su usuario
+            return personaActualizada;
+        } else if (detalles.getTipoPersona() != null) {
+            // Actualiza el tipo de persona cuando no requiere generación de nuevo usuario
+            persona.setTipoPersona(detalles.getTipoPersona());
+        }
 
-        // Validar que si la persona queda como CONDUCTOR ('C'), tenga su documento de licencia en Base64
-        if ("C".equalsIgnoreCase(persona.getTipoPersona())) { // Verifica si la persona es Conductor ('C')
-            if (persona.getLicenciaConduccion() == null || persona.getLicenciaConduccion().isBlank()) { // Verifica que tenga su licencia en Base64 registrada
-                throw new IllegalArgumentException("Para una persona de tipo CONDUCTOR ('C'), el documento de licencia de conducción en formato Base64 ('licenciaConduccion') es obligatorio."); // Lanza error 400 si falta el documento
-            } // Fin de validación de licencia obligatoria
-        } // Fin de verificación para Conductor
+        // Registra en el log la actualización de la persona
+        logger.info("Persona actualizada exitosamente con ID: {}", id);
+        // Guarda y retorna la persona actualizada
+        Persona guardada = personaRepository.save(persona);
+        adjuntarUsuarioSiEsAdministrativo(guardada);
+        return guardada;
+    }
 
-        return personaRepository.save(persona); // Guarda y retorna la entidad Persona actualizada
-    } // Fin del método actualizarPersona
+    // Sube un archivo PDF físico de licencia de conducción, lo convierte a Base64 y lo almacena en el campo LONGBLOB
+    @Override
+    @Transactional
+    public Persona cargarLicenciaPdf(Long id, String fechaVigenciaLicencia, MultipartFile archivoPdf) {
+        if (archivoPdf == null || archivoPdf.isEmpty()) {
+            throw new IllegalArgumentException("Debe adjuntar un archivo PDF válido para la licencia de conducción.");
+        }
+        Persona persona = obtenerPorId(id);
+        if (!"C".equalsIgnoreCase(persona.getTipoPersona())) {
+            throw new IllegalArgumentException("Solo las personas de tipo CONDUCTOR (C) requieren licencia de conducción.");
+        }
+        try {
+            String base64Pdf = Base64.getEncoder().encodeToString(archivoPdf.getBytes());
+            persona.setLicenciaConduccion(base64Pdf);
+            if (fechaVigenciaLicencia != null && !fechaVigenciaLicencia.isBlank()) {
+                persona.setFechaVigenciaLicencia(LocalDate.parse(fechaVigenciaLicencia.trim()));
+            }
+            logger.info("Licencia PDF convertida a Base64 y guardada en LONGBLOB para el conductor ID: {}", id);
+            return personaRepository.save(persona);
+        } catch (IOException e) {
+            throw new RuntimeException("Error al procesar el archivo PDF de la licencia: " + e.getMessage(), e);
+        }
+    }
 
-    public List<Persona> listarTodas() { // Método para listar todas las personas registradas
-        return personaRepository.findAll(); // Retorna todos los registros de la tabla personas
-    } // Fin del método listarTodas
+    // Lista todas las personas registradas en la base de datos
+    @Override
+    @Transactional(readOnly = true)
+    public List<Persona> listarTodas() {
+        List<Persona> lista = personaRepository.findAll();
+        lista.forEach(this::adjuntarUsuarioSiEsAdministrativo);
+        return lista;
+    }
 
-    public Persona obtenerPorId(Long id) { // Método para buscar una persona por su clave primaria
-        return personaRepository.findById(id) // Consulta la persona en base de datos por ID
-                .orElseThrow(() -> new RuntimeException("Persona no encontrada con ID: " + id)); // Lanza excepción si no existe
-    } // Fin del método obtenerPorId
+    // Busca una persona por su ID primario o lanza excepción si no existe
+    @Override
+    @Transactional(readOnly = true)
+    public Persona obtenerPorId(Long id) {
+        Persona persona = personaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Persona no encontrada con ID: " + id));
+        adjuntarUsuarioSiEsAdministrativo(persona);
+        return persona;
+    }
 
-    public List<Persona> listarPorTipo(String tipoPersona) { // Método para listar personas filtradas por su tipo ('A' o 'C')
-        return personaRepository.findByTipoPersona(tipoPersona); // Retorna la lista filtrada desde el repositorio
-    } // Fin del método listarPorTipo
-} // Fin de la clase PersonaService
+    // Filtra y retorna las personas según su tipo ('C' Conductor o 'A' Administrativo)
+    @Override
+    @Transactional(readOnly = true)
+    public List<Persona> listarPorTipo(String tipoPersona) {
+        List<Persona> lista = personaRepository.findByTipoPersona(tipoPersona);
+        lista.forEach(this::adjuntarUsuarioSiEsAdministrativo);
+        return lista;
+    }
+
+    // Consulta pública 8.5: Total de personas agrupadas por tipo ('C' y 'A')
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> obtenerTotalPersonasPorTipo() {
+        List<Object[]> resultados = personaRepository.countPersonasByTipo();
+        Map<String, Long> respuesta = new HashMap<>();
+        respuesta.put("A", 0L);
+        respuesta.put("C", 0L);
+        for (Object[] fila : resultados) {
+            String tipo = fila[0] != null ? fila[0].toString() : "Desconocido";
+            Long total = fila[1] != null ? ((Number) fila[1]).longValue() : 0L;
+            respuesta.put(tipo, total);
+        }
+        return respuesta;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> obtenerResumenPersonas() {
+        long totalAdministrativos = personaRepository.findByTipoPersona("A").size();
+        long totalConductores = personaRepository.findByTipoPersona("C").size();
+        long totalGeneral = personaRepository.count();
+
+        Map<String, Object> resumen = new HashMap<>();
+        resumen.put("totalRegistrados", totalGeneral);
+        resumen.put("administrativos", totalAdministrativos);
+        resumen.put("conductores", totalConductores);
+        return resumen;
+    }
+}

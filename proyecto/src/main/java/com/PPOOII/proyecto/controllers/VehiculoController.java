@@ -11,8 +11,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -136,8 +138,8 @@ public class VehiculoController {
         return ResponseEntity.ok(vehiculoActualizado);
     }
 
-    // NUEVO ENDPOINT REQUERIDO POR LA RÚBRICA: Cargue de documentos PDF en Base64
-    @Operation(summary = "Cargar documentos en Base64", description = "Procesa un listado de documentos incluyendo su archivo PDF codificado en Base64")
+    // ENDPOINT REQUERIDO POR LA RÚBRICA: Cargue de uno o varios documentos PDF en Base64 (almacenados en LONGBLOB)
+    @Operation(summary = "Cargar documentos en Base64", description = "Procesa un listado de documentos incluyendo su archivo PDF codificado en Base64 para almacenarlo en columna LONGBLOB")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Documentos cargados exitosamente"),
         @ApiResponse(responseCode = "400", description = "Estructura del payload inválida")
@@ -146,5 +148,24 @@ public class VehiculoController {
     public ResponseEntity<List<VehiculoDocumento>> cargarDocumentosPdf(@RequestBody List<Map<String, Object>> payload) {
         List<VehiculoDocumento> documentosGuardados = vehiculoDocumentoService.cargarDocumentos(payload);
         return ResponseEntity.status(HttpStatus.CREATED).body(documentosGuardados);
+    }
+
+    // ENDPOINT PARA SUBIR EL ARCHIVO EN FORMATO PDF Y CONVERTIRLO AUTOMÁTICAMENTE A BASE64 EN CAMPO LONGBLOB
+    @Operation(summary = "Subir archivo PDF de documento vehicular y convertir a Base64", description = "Recibe el archivo físico .pdf por multipart/form-data, realiza la conversión automática a Base64 y lo persiste en el campo LONGBLOB.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Archivo PDF convertido a Base64 y almacenado en LONGBLOB exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Archivo inválido o no es formato PDF")
+    })
+    @PostMapping(value = "/documentos/upload-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VehiculoDocumento> subirArchivoPdf(
+            @RequestParam("vehiculoId") Integer vehiculoId,
+            @RequestParam("documentoId") Integer documentoId,
+            @RequestParam("fechaExpedicion") String fechaExpedicion,
+            @RequestParam("fechaVencimiento") String fechaVencimiento,
+            @RequestParam(value = "estado", required = false, defaultValue = "En Verificación") String estado,
+            @RequestParam("file") MultipartFile file) {
+        VehiculoDocumento guardado = vehiculoDocumentoService.cargarArchivoPdf(
+                vehiculoId, documentoId, fechaExpedicion, fechaVencimiento, estado, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 }
