@@ -25,10 +25,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 // Importación de HttpStatus para códigos de estado HTTP
 import org.springframework.http.HttpStatus;
+// Importación de MediaType para soporte de multipart/form-data
+import org.springframework.http.MediaType;
 // Importación de ResponseEntity para respuestas HTTP
 import org.springframework.http.ResponseEntity;
 // Importación de anotaciones web de Spring MVC
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+// Importación de MultipartFile para recepción de archivos PDF
+import org.springframework.web.multipart.MultipartFile;
 
 // Importación de la interfaz List de Java
 import java.util.List;
@@ -57,7 +62,7 @@ public class VehiculoOperacionController {
     @Autowired
     private VehiculoPersonaService vehiculoPersonaService;
 
-    // 1. Carga masiva/individual de documentos PDF Base64
+    // 1. Carga masiva/individual de documentos PDF Base64 (uno o varios documentos a la vez)
     @Operation(summary = "Cargar documentos PDF Base64 a vehículos", description = "Recibe una lista de documentos con su representación obligatoria en PDF Base64 ('documentoPdfBase64'), fechas y estado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Documentos PDF Base64 cargados exitosamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = VehiculoDocumento.class))),
@@ -70,6 +75,21 @@ public class VehiculoOperacionController {
         List<VehiculoDocumento> resultado = vehiculoDocumentoService.cargarDocumentos(documentosPayload);
         // Retorna HTTP 201 Created con los documentos almacenados
         return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+    }
+
+    // 1.B. Subir archivo físico .pdf y convertirlo automáticamente a Base64 en columna LONGBLOB
+    @Operation(summary = "Subir archivo PDF de documento vehicular (conversión automática a Base64)", description = "Permite subir un archivo en formato PDF, realiza la conversión automática a Base64 y lo guarda dentro del campo LONGBLOB.")
+    @PostMapping(value = "/documentos/cargar-archivo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VehiculoDocumento> cargarArchivoPdf(
+            @RequestParam("vehiculoId") Integer vehiculoId,
+            @RequestParam("documentoId") Integer documentoId,
+            @RequestParam("fechaExpedicion") String fechaExpedicion,
+            @RequestParam("fechaVencimiento") String fechaVencimiento,
+            @RequestParam(value = "estado", required = false, defaultValue = "En Verificación") String estado,
+            @RequestParam("file") MultipartFile file) {
+        VehiculoDocumento guardado = vehiculoDocumentoService.cargarArchivoPdf(
+                vehiculoId, documentoId, fechaExpedicion, fechaVencimiento, estado, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
     // 2. Asociar vehículos a un conductor específico
@@ -92,7 +112,7 @@ public class VehiculoOperacionController {
     }
 
     // 3. Cambiar estado del conductor (PO, EA, RO)
-    @Operation(summary = "Cambiar estado operativo del conductor", description = "Actualiza el estado del conductor respecto al vehículo ('PO' Para Operar, 'EA' En Asignación, 'RO' Restringido para Operar).")
+    @Operation(summary = "Cambiar estado operativo del conductor", description = "Actualiza el estado del conductor respecto al vehículo ('PO' Puede Operar, 'EA' Espera de Aprobación, 'RO' Restringido para Operar).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Estado del conductor actualizado con éxito", content = @Content(mediaType = "application/json", schema = @Schema(implementation = VehiculoPersona.class))),
             @ApiResponse(responseCode = "400", description = "Estado no permitido o relación no encontrada", content = @Content),
@@ -109,5 +129,22 @@ public class VehiculoOperacionController {
         VehiculoPersona vpActualizado = vehiculoPersonaService.cambiarEstadoConductor(idRelacion, nuevoEstado);
         // Retorna HTTP 200 OK con la relación actualizada
         return ResponseEntity.ok(vpActualizado);
+    }
+
+    // 4. Listar todas las relaciones Conductor-Vehículo activas e históricas
+    @Operation(summary = "Listar todas las relaciones Conductor-Vehículo", description = "Retorna todas las asociaciones registradas en vehiculo_personas con su estado operativo actual ('PO', 'EA', 'RO').")
+    @GetMapping("/conductores/relaciones")
+    public ResponseEntity<List<VehiculoPersona>> listarRelacionesConductores() {
+        return ResponseEntity.ok(vehiculoPersonaService.listarTodas());
+    }
+
+    // 5. Cambiar el estado de un documento vehicular ('Habilitado', 'Vencido', 'En Verificación')
+    @Operation(summary = "Cambiar estado de un documento vehicular", description = "Actualiza el estado de un registro en vehiculo_documento ('Habilitado', 'Vencido', 'En Verificación').")
+    @PutMapping("/documentos/{id}/estado")
+    public ResponseEntity<VehiculoDocumento> cambiarEstadoDocumento(
+            @PathVariable int id,
+            @RequestBody Map<String, String> payload) {
+        String nuevoEstado = payload.getOrDefault("estado", payload.get("nuevoEstado"));
+        return ResponseEntity.ok(vehiculoDocumentoService.cambiarEstadoDocumento(id, nuevoEstado));
     }
 }

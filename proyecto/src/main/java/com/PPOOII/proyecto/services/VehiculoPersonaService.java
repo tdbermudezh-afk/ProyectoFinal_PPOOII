@@ -7,6 +7,8 @@ import com.PPOOII.proyecto.entities.Persona;
 import com.PPOOII.proyecto.entities.Vehiculo;
 // Importación de la entidad de relación VehiculoPersona
 import com.PPOOII.proyecto.entities.VehiculoPersona;
+// Importación de excepción personalizada ResourceNotFoundException
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 // Importación del repositorio JPA de Persona
 import com.PPOOII.proyecto.repository.PersonaRepository;
 // Importación del repositorio JPA de VehiculoPersona
@@ -57,7 +59,7 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
         // Busca la persona por su ID o lanza excepción si no existe
         Persona persona = personaRepository.findById(personaId)
                 // Mensaje de error cuando la persona no existe
-                .orElseThrow(() -> new RuntimeException("Persona no encontrada con ID: " + personaId));
+                .orElseThrow(() -> new ResourceNotFoundException("Persona no encontrada con ID: " + personaId));
 
         // Regla de negocio: Solo las personas de tipo CONDUCTOR ('C') pueden asociarse a vehículos para operación
         if (!"C".equalsIgnoreCase(persona.getTipoPersona())) {
@@ -70,7 +72,12 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
         // Busca el vehículo por su ID o lanza excepción si no existe
         Vehiculo vehiculo = vehiculoRepository.findById(vId)
                 // Mensaje de error cuando el vehículo no existe
-                .orElseThrow(() -> new RuntimeException("Vehículo no encontrado con ID: " + vehiculoId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con ID: " + vehiculoId));
+
+        String estadoEfectivo = (estadoInicial != null && !estadoInicial.isBlank()) ? estadoInicial.trim().toUpperCase() : "EA";
+        if (!estadoEfectivo.matches("^(PO|EA|RO)$")) {
+            throw new IllegalArgumentException("Estado inválido. Los estados permitidos son: PO (Puede Operar), EA (Espera de Aprobación), RO (Restringido para Operar).");
+        }
 
         // Crea la nueva instancia de relación VehiculoPersona
         VehiculoPersona vp = new VehiculoPersona();
@@ -80,8 +87,8 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
         vp.setVehiculo(vehiculo);
         // Asigna la fecha actual como fecha de asociación
         vp.setFechaAsociacion(LocalDate.now());
-        // Asigna el estado inicial o 'EA' (En Asignación) por defecto
-        vp.setEstadoConductor(estadoInicial != null ? estadoInicial : "EA");
+        // Asigna el estado inicial o 'EA' (Espera de Aprobación) por defecto
+        vp.setEstadoConductor(estadoEfectivo);
 
         // Registra en el log la asociación realizada
         logger.info("Asociando conductor ID: {} al vehículo ID: {} con estado: {}", personaId, vehiculoId, vp.getEstadoConductor());
@@ -94,7 +101,7 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
     @Transactional
     public VehiculoPersona cambiarEstadoConductor(Long idRelacion, String nuevoEstado) {
         // Valida que el nuevo estado corresponda a uno de los valores permitidos
-        if (!nuevoEstado.matches("^(PO|EA|RO)$")) {
+        if (nuevoEstado == null || !nuevoEstado.trim().matches("^(PO|EA|RO)$")) {
             // Lanza excepción si el código de estado es inválido
             throw new IllegalArgumentException("Estado inválido. Los estados permitidos son: PO, EA, RO");
         }
@@ -102,10 +109,10 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
         // Busca la relación existente por su ID o lanza excepción si no existe
         VehiculoPersona vp = vehiculoPersonaRepository.findById(idRelacion)
                 // Mensaje de error cuando la relación no existe
-                .orElseThrow(() -> new RuntimeException("Relación Vehículo-Persona no encontrada con ID: " + idRelacion));
+                .orElseThrow(() -> new ResourceNotFoundException("Relación Vehículo-Persona no encontrada con ID: " + idRelacion));
 
         // Actualiza el estado del conductor
-        vp.setEstadoConductor(nuevoEstado);
+        vp.setEstadoConductor(nuevoEstado.trim());
         // Registra en el log el cambio de estado
         logger.info("Cambiando estado de la relación ID: {} a '{}'", idRelacion, nuevoEstado);
         // Guarda y retorna la relación actualizada
@@ -114,8 +121,23 @@ public class VehiculoPersonaService implements IVehiculoPersonaService {
 
     // Lista todas las asociaciones de vehículos correspondientes a una persona
     @Override
+    @Transactional(readOnly = true)
     public List<VehiculoPersona> listarPorPersona(Long personaId) {
         // Consulta y retorna las relaciones filtradas por ID de persona
         return vehiculoPersonaRepository.findByPersonaId(personaId);
+    }
+
+    // Lista todas las asociaciones conductor-vehículo existentes en el sistema
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehiculoPersona> listarTodas() {
+        return vehiculoPersonaRepository.findAll();
+    }
+
+    // Consulta pública 8.2: Retorna todos los conductores cuyo estado sea 'PO' (Puede Operar)
+    @Override
+    @Transactional(readOnly = true)
+    public List<Persona> obtenerConductoresQuePuedenOperar() {
+        return vehiculoPersonaRepository.findConductoresQuePuedenOperar();
     }
 }

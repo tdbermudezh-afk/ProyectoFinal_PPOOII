@@ -1,18 +1,21 @@
 // Paquete de entidades del dominio
 package com.PPOOII.proyecto.entities;
 
+import com.PPOOII.proyecto.entities.converters.Base64BlobConverter;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import org.hibernate.annotations.Check;
 import java.io.Serializable;
 import java.time.LocalDate;
 
 // Entidad JPA que modela la relación de asociación entre un Vehículo y un Documento
-// Contiene los atributos complementarios: fechas de expedición, vencimiento y estado
+// Contiene los atributos complementarios: fechas de expedición, vencimiento, estado y archivo PDF en Base64 (LONGBLOB)
 @Entity
 @Table(name = "vehiculo_documento")
+@Check(constraints = "estado IN ('Habilitado', 'Vencido', 'En Verificación')")
 public class VehiculoDocumento implements Serializable {
 
     // Identificador de versión de serialización según el Laboratorio 1
@@ -53,8 +56,9 @@ public class VehiculoDocumento implements Serializable {
     @Column(nullable = false, length = 20)
     private String estado = "En Verificación";
 
-    @Lob
-    @Column(name = "documento_pdf_base64", columnDefinition = "LONGTEXT")
+    // Campo BLOB (LONGBLOB) para almacenar el archivo PDF en formato Base64 (Entrega 2)
+    @Convert(converter = Base64BlobConverter.class)
+    @Column(name = "documento_pdf_base64", columnDefinition = "LONGBLOB")
     private String documentoPdfBase64;
 
     // Constructor vacío por defecto requerido por JPA
@@ -77,7 +81,9 @@ public class VehiculoDocumento implements Serializable {
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
     public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
+    public void setEstado(String estado) {
+        this.estado = (estado == null || estado.trim().isEmpty()) ? "En Verificación" : estado.trim();
+    }
 
     public String getDocumentoPdfBase64() {
         return documentoPdfBase64;
@@ -85,6 +91,16 @@ public class VehiculoDocumento implements Serializable {
 
     public void setDocumentoPdfBase64(String documentoPdfBase64) {
         this.documentoPdfBase64 = documentoPdfBase64;
+    }
+
+    @Transient
+    public Integer getVehiculoId() {
+        return vehiculo != null ? vehiculo.getId() : null;
+    }
+
+    @Transient
+    public String getVehiculoPlaca() {
+        return vehiculo != null ? vehiculo.getPlaca() : null;
     }
 
     @Override // Sobrescribe el método toString según el Laboratorio 1

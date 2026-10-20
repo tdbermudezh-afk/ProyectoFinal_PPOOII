@@ -7,6 +7,8 @@ import com.PPOOII.proyecto.entities.Documento;
 import com.PPOOII.proyecto.entities.Vehiculo;
 // Importación de la entidad de relación VehiculoDocumento
 import com.PPOOII.proyecto.entities.VehiculoDocumento;
+// Importación de excepción personalizada ResourceNotFoundException
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 // Importación del repositorio JPA de Documento
 import com.PPOOII.proyecto.repository.DocumentoRepository;
 // Importación del repositorio JPA de VehiculoDocumento
@@ -25,15 +27,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 // Importación de la anotación @Transactional para manejo transaccional
 import org.springframework.transaction.annotation.Transactional;
+// Importación de MultipartFile para recepción de archivos PDF
+import org.springframework.web.multipart.MultipartFile;
 
+// Importación de IOException para lectura de bytes del PDF
+import java.io.IOException;
 // Importación de la clase LocalDate para manejo de fechas
 import java.time.LocalDate;
 // Importación de ArrayList para construir listas dinámicas
 import java.util.ArrayList;
+// Importación de Base64 para codificar archivos PDF binarios a Base64
+import java.util.Base64;
+// Importación de HashMap para construcción de payloads
+import java.util.HashMap;
 // Importación de la interfaz List de Java
 import java.util.List;
 // Importación de la interfaz Map de Java
 import java.util.Map;
+// Importación de Collectors para filtrado de flujos
+import java.util.stream.Collectors;
 
 // Servicio que implementa IVehiculoDocumentoService para la carga y gestión de documentos PDF Base64 de vehículos
 @Service("VehiculoDocumentoService")
@@ -58,11 +70,18 @@ public class VehiculoDocumentoService implements IVehiculoDocumentoService {
     @Override
     @Transactional
     public List<VehiculoDocumento> cargarDocumentos(List<Map<String, Object>> listaDocumentosPayload) {
+        if (listaDocumentosPayload == null || listaDocumentosPayload.isEmpty()) {
+            throw new IllegalArgumentException("Debe enviar al menos un documento en la lista para realizar el cargue.");
+        }
+
         // Lista donde se almacenarán los registros procesados y guardados
         List<VehiculoDocumento> guardados = new ArrayList<>();
 
         // Itera sobre cada elemento enviado en el payload JSON
         for (Map<String, Object> item : listaDocumentosPayload) {
+            if (item.get("vehiculoId") == null || item.get("documentoId") == null) {
+                throw new IllegalArgumentException("Cada registro debe incluir 'vehiculoId' y 'documentoId'.");
+            }
             // Extrae y convierte el ID del vehículo
             int vehiculoId = Integer.parseInt(item.get("vehiculoId").toString());
             // Extrae y convierte el ID del documento parametrizado
@@ -85,12 +104,12 @@ public class VehiculoDocumentoService implements IVehiculoDocumentoService {
             // Busca el vehículo en la base de datos o lanza excepción si no existe
             Vehiculo vehiculo = vehiculoRepository.findById(vehiculoId)
                     // Mensaje de error si el vehículo no existe
-                    .orElseThrow(() -> new RuntimeException("Vehículo no encontrado con ID: " + vehiculoId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con ID: " + vehiculoId));
 
             // Busca el tipo de documento en el catálogo o lanza excepción si no existe
             Documento documento = documentoRepository.findById(documentoId)
                     // Mensaje de error si el documento del catálogo no existe
-                    .orElseThrow(() -> new RuntimeException("Documento tipo catálogo no encontrado con ID: " + documentoId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Documento tipo catálogo no encontrado con ID: " + documentoId));
 
             // Validar compatibilidad entre el documento y el tipo de vehículo
             String tipoVehiculo = vehiculo.getTipoVehiculo();
@@ -155,7 +174,7 @@ public class VehiculoDocumentoService implements IVehiculoDocumentoService {
                 }
             }
 
-            // Asigna el contenido del documento PDF codificado en Base64
+            // Asigna el contenido del documento PDF codificado en Base64 (almacenado en LONGBLOB)
             vDoc.setDocumentoPdfBase64(pdfBase64.trim());
 
             // Valida y asigna el estado del documento
@@ -167,7 +186,7 @@ public class VehiculoDocumentoService implements IVehiculoDocumentoService {
                 }
                 // Asigna el estado validado
                 vDoc.setEstado(estadoStr);
-            } else if (vDoc.getEstado() == null) {
+            } else if (vDoc.getEstado() == null || vDoc.getEstado().isBlank()) {
                 // Si no tenía estado previo, asigna 'En Verificación' por defecto
                 vDoc.setEstado("En Verificación");
             }
@@ -180,5 +199,79 @@ public class VehiculoDocumentoService implements IVehiculoDocumentoService {
 
         // Retorna la lista de documentos procesados y almacenados
         return guardados;
+    }
+
+    // Recibe un archivo físico PDF (MultipartFile), lo convierte a Base64 y lo guarda en el campo LONGBLOB
+    @Override
+    @Transactional
+    public VehiculoDocumento cargarArchivoPdf(int vehiculoId, int documentoId, String fechaExpedicion, String fechaVencimiento, String estado, MultipartFile archivoPdf) {
+        if (archivoPdf == null || archivoPdf.isEmpty()) {
+            throw new IllegalArgumentException("Debe adjuntar un archivo PDF válido no vacío.");
+        }
+        try {
+            byte[] pdfBytes = archivoPdf.getBytes();
+            String pdfBase64 = Base64.getEncoder().encodeToString(pdfBytes);
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("vehiculoId", vehiculoId);
+            item.put("documentoId", documentoId);
+            item.put("fechaExpedicion", fechaExpedicion != null ? fechaExpedicion : LocalDate.now().toString());
+            item.put("fechaVencimiento", fechaVencimiento != null ? fechaVencimiento : LocalDate.now().plusYears(1).toString());
+            item.put("estado", estado != null ? estado : "En Verificación");
+            item.put("documentoPdfBase64", pdfBase64);
+
+            List<VehiculoDocumento> resultado = cargarDocumentos(List.of(item));
+            return resultado.get(0);
+        } catch (IOException e) {
+            throw new RuntimeException("Error al leer y convertir el archivo PDF a Base64: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public VehiculoDocumento cambiarEstadoDocumento(int idVehiculoDocumento, String nuevoEstado) {
+        if (nuevoEstado == null || !nuevoEstado.trim().matches("^(Habilitado|Vencido|En Verificación)$")) {
+            throw new IllegalArgumentException("El estado del documento debe ser 'Habilitado', 'Vencido' o 'En Verificación'.");
+        }
+        VehiculoDocumento vDoc = vehiculoDocumentoRepository.findById(idVehiculoDocumento)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento asociado no encontrado con ID: " + idVehiculoDocumento));
+        vDoc.setEstado(nuevoEstado.trim());
+        logger.info("Actualizando estado de vehiculo_documento ID: {} a '{}'", idVehiculoDocumento, nuevoEstado);
+        return vehiculoDocumentoRepository.save(vDoc);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Vehiculo> obtenerVehiculosConDocumentosVencidos() {
+        return vehiculoDocumentoRepository.findVehiculosConDocumentosVencidos();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Vehiculo> obtenerVehiculosConDocumentosPorVencer(int diasFaltantes) {
+        LocalDate fechaLimite = LocalDate.now().plusDays(diasFaltantes);
+        return vehiculoDocumentoRepository.findVehiculosConDocumentosPorVencer(fechaLimite);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehiculoDocumento> obtenerDocumentosVencidos() {
+        LocalDate hoy = LocalDate.now();
+        return vehiculoDocumentoRepository.findAll().stream()
+                .filter(doc -> (doc.getFechaVencimiento() != null && doc.getFechaVencimiento().isBefore(hoy))
+                        || "Vencido".equalsIgnoreCase(doc.getEstado()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehiculoDocumento> obtenerDocumentosPorVencer(int dias) {
+        LocalDate hoy = LocalDate.now();
+        LocalDate limite = hoy.plusDays(dias);
+        return vehiculoDocumentoRepository.findAll().stream()
+                .filter(doc -> doc.getFechaVencimiento() != null &&
+                        !doc.getFechaVencimiento().isBefore(hoy) &&
+                        !doc.getFechaVencimiento().isAfter(limite))
+                .collect(Collectors.toList());
     }
 }

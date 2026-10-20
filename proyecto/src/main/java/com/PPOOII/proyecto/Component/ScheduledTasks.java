@@ -72,10 +72,10 @@ public class ScheduledTasks {
     private TrayectoRepository trayectoRepository;
 
     // -----------------------------------------------------------------------------------------
-    // TAREA 1: Verificación de vigencia de licencias de conductores (Cada 2 minutos con expresión cron del Laboratorio 3)
+    // TAREA 1: Verificación de vigencia de licencias de conductores (Cada 2 minutos = 120.000 ms)
     // Cambia el estado del conductor en la relación con el vehículo a 'RO' (Restringido para Operar)
     // -----------------------------------------------------------------------------------------
-    @Scheduled(cron = "0 */2 * * * ?")
+    @Scheduled(fixedRate = 120000)
     @Transactional
     public void verificarVigenciaLicenciasConductores() {
         // Registra el inicio de ejecución de la tarea programada con el formato del Laboratorio 3
@@ -96,12 +96,19 @@ public class ScheduledTasks {
                     if (!"RO".equalsIgnoreCase(rel.getEstadoConductor())) {
                         // Cambia el estado operativo a 'RO' (Restringido para Operar)
                         rel.setEstadoConductor("RO");
-                        // Persiste el cambio en la base de datos
-                        vehiculoPersonaRepository.save(rel);
+                        // Persiste el cambio en la base de datos inmediatamente
+                        vehiculoPersonaRepository.saveAndFlush(rel);
                         // Registra alerta detallada en el log
                         logger.warn("[ALERTA LICENCIA VENCIDA] Conductor '{} {}' (ID: {}) con licencia vencida el {}. Asignación ID: {} cambiada a 'RO'.",
                                 conductor.getNombres(), conductor.getApellidos(), conductor.getId(),
                                 conductor.getFechaVigenciaLicencia(), rel.getId());
+
+                        // Notificación aislada en try/catch independiente para jamás afectar la transacción de BD
+                        try {
+                            enviarNotificacionRestriccionConductor(conductor, rel);
+                        } catch (Exception mailEx) {
+                            logger.warn("[NOTIFICACION CORREO] No se pudo enviar correo a {}: {}", conductor.getCorreo(), mailEx.getMessage());
+                        }
                     }
                 }
             }
@@ -111,11 +118,17 @@ public class ScheduledTasks {
         }
     }
 
+    // Método auxiliar aislado para trazabilidad de notificación al conductor restringido
+    private void enviarNotificacionRestriccionConductor(Persona conductor, VehiculoPersona rel) {
+        logger.info("[NOTIFICACION ENVIADA] Destinatario: {} | Asunto: Restricción Operativa (RO) | Vehículo ID: {} | Motivo: Licencia vencida el {}",
+                conductor.getCorreo(), rel.getVehiculo().getId(), conductor.getFechaVigenciaLicencia());
+    }
+
     // -----------------------------------------------------------------------------------------
-    // TAREA 2: Verificación de vigencia de documentos asociados al vehículo (Cada 2 minutos con expresión cron del Laboratorio 3)
+    // TAREA 2: Verificación de vigencia de documentos asociados al vehículo (Cada 2 minutos = 120.000 ms)
     // Cambia el estado del documento asociado al vehículo a 'Vencido'
     // -----------------------------------------------------------------------------------------
-    @Scheduled(cron = "0 */2 * * * ?")
+    @Scheduled(fixedRate = 120000)
     @Transactional
     public void verificarVigenciaDocumentosVehiculos() {
         // Registra el inicio de ejecución de la tarea programada con el formato del Laboratorio 3
@@ -135,8 +148,8 @@ public class ScheduledTasks {
                     if (!"Vencido".equalsIgnoreCase(doc.getEstado())) {
                         // Actualiza el estado del documento a 'Vencido'
                         doc.setEstado("Vencido");
-                        // Guarda el cambio en la base de datos
-                        vehiculoDocumentoRepository.save(doc);
+                        // Guarda el cambio en la base de datos inmediatamente
+                        vehiculoDocumentoRepository.saveAndFlush(doc);
                         // Registra alerta detallada en el log
                         logger.warn("[ALERTA DOCUMENTO VENCIDO] Documento ID: {} del vehículo ID: {} venció el {}. Estado actualizado a 'Vencido'.",
                                 doc.getId(), doc.getVehiculo().getId(), doc.getFechaVencimiento());
@@ -184,8 +197,8 @@ public class ScheduledTasks {
                     trayecto.setLatitud(coordenadas[0]);
                     // Asigna la longitud obtenida
                     trayecto.setLongitud(coordenadas[1]);
-                    // Guarda el trayecto actualizado en la base de datos
-                    trayectoRepository.save(trayecto);
+                    // Guarda el trayecto actualizado en la base de datos inmediatamente
+                    trayectoRepository.saveAndFlush(trayecto);
                     // Registra las coordenadas asignadas en el log
                     logger.info("Coordenadas asignadas al Trayecto ID {}: Lat {}, Lng {}", trayecto.getId(), coordenadas[0], coordenadas[1]);
                 }

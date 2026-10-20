@@ -7,6 +7,8 @@ import com.PPOOII.proyecto.entities.Persona;
 import com.PPOOII.proyecto.entities.Usuario;
 // Importación de la llave primaria compuesta UsuarioPK
 import com.PPOOII.proyecto.entities.UsuarioPK;
+// Importación de excepción personalizada ResourceNotFoundException
+import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 // Importación del repositorio JPA de Persona
 import com.PPOOII.proyecto.repository.PersonaRepository;
 // Importación del repositorio JPA de Usuario
@@ -23,9 +25,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 // Importación de la anotación @Transactional para manejo transaccional
 import org.springframework.transaction.annotation.Transactional;
+// Importación de MultipartFile para carga de archivos PDF
+import org.springframework.web.multipart.MultipartFile;
 
+// Importación de IOException para lectura de bytes del PDF
+import java.io.IOException;
+// Importación de LocalDate para fecha de vigencia de licencia
+import java.time.LocalDate;
+// Importación de Base64 para codificar PDF a Base64
+import java.util.Base64;
+// Importación de HashMap para mapas de estadísticas
+import java.util.HashMap;
 // Importación de la estructura List de Java
 import java.util.List;
+// Importación de la interfaz Map de Java
+import java.util.Map;
 // Importación del generador de identificadores únicos UUID
 import java.util.UUID;
 
@@ -88,12 +102,18 @@ public class PersonaService implements IPersonaService {
 
     // Método auxiliar que construye el login nemotécnico, password y APIKey para un usuario administrativo
     private Usuario generarUsuarioParaAdministrativo(Persona persona) {
-        // Nemotecnia: Primera letra del nombre + primera letra del apellido + identificación
+        // Verifica si la persona ya tiene un usuario asignado (relación 1:1 estricta)
+        var existente = usuarioRepository.findByIdIdPersona(persona.getId());
+        if (existente.isPresent()) {
+            return existente.get();
+        }
+
+        // Nemotecnia: Primera letra del primer nombre + primera letra del primer apellido + identificación
         String primeraLetraNombre = persona.getNombres().trim().substring(0, 1).toLowerCase();
-        // Obtiene la primera letra del apellido en minúscula
+        // Obtiene la primera letra del primer apellido en minúscula
         String primeraLetraApellido = persona.getApellidos().trim().substring(0, 1).toLowerCase();
         // Concatena las iniciales con el número de identificación
-        String loginNemotecnico = primeraLetraNombre + primeraLetraApellido + persona.getIdentificacion();
+        String loginNemotecnico = primeraLetraNombre + primeraLetraApellido + persona.getIdentificacion().trim();
 
         // Generación automática de contraseña aleatoria con prefijo Pwd
         String passwordGenerado = "Pwd" + UUID.randomUUID().toString().substring(0, 8);
@@ -118,6 +138,13 @@ public class PersonaService implements IPersonaService {
         logger.info("Usuario administrativo generado automáticamente con login: {}", loginNemotecnico);
         // Persiste y retorna el nuevo usuario
         return usuarioRepository.save(usuario);
+    }
+
+    // Vincula el usuario generado en el campo transiente si la persona es de tipo Administrativo ('A')
+    private void adjuntarUsuarioSiEsAdministrativo(Persona persona) {
+        if (persona != null && "A".equalsIgnoreCase(persona.getTipoPersona()) && persona.getUsuarioGenerado() == null) {
+            usuarioRepository.findByIdIdPersona(persona.getId()).ifPresent(persona::setUsuarioGenerado);
+        }
     }
 
     // Actualiza la información de una persona existente por su ID
@@ -180,29 +207,90 @@ public class PersonaService implements IPersonaService {
         // Registra en el log la actualización de la persona
         logger.info("Persona actualizada exitosamente con ID: {}", id);
         // Guarda y retorna la persona actualizada
-        return personaRepository.save(persona);
+        Persona guardada = personaRepository.save(persona);
+        adjuntarUsuarioSiEsAdministrativo(guardada);
+        return guardada;
+    }
+
+    // Sube un archivo PDF físico de licencia de conducción, lo convierte a Base64 y lo almacena en el campo LONGBLOB
+    @Override
+    @Transactional
+    public Persona cargarLicenciaPdf(Long id, String fechaVigenciaLicencia, MultipartFile archivoPdf) {
+        if (archivoPdf == null || archivoPdf.isEmpty()) {
+            throw new IllegalArgumentException("Debe adjuntar un archivo PDF válido para la licencia de conducción.");
+        }
+        Persona persona = obtenerPorId(id);
+        if (!"C".equalsIgnoreCase(persona.getTipoPersona())) {
+            throw new IllegalArgumentException("Solo las personas de tipo CONDUCTOR (C) requieren licencia de conducción.");
+        }
+        try {
+            String base64Pdf = Base64.getEncoder().encodeToString(archivoPdf.getBytes());
+            persona.setLicenciaConduccion(base64Pdf);
+            if (fechaVigenciaLicencia != null && !fechaVigenciaLicencia.isBlank()) {
+                persona.setFechaVigenciaLicencia(LocalDate.parse(fechaVigenciaLicencia.trim()));
+            }
+            logger.info("Licencia PDF convertida a Base64 y guardada en LONGBLOB para el conductor ID: {}", id);
+            return personaRepository.save(persona);
+        } catch (IOException e) {
+            throw new RuntimeException("Error al procesar el archivo PDF de la licencia: " + e.getMessage(), e);
+        }
     }
 
     // Lista todas las personas registradas en la base de datos
     @Override
+    @Transactional(readOnly = true)
     public List<Persona> listarTodas() {
-        // Retorna la lista completa de personas desde el repositorio
-        return personaRepository.findAll();
+        List<Persona> lista = personaRepository.findAll();
+        lista.forEach(this::adjuntarUsuarioSiEsAdministrativo);
+        return lista;
     }
 
     // Busca una persona por su ID primario o lanza excepción si no existe
     @Override
+    @Transactional(readOnly = true)
     public Persona obtenerPorId(Long id) {
-        // Busca por ID o lanza excepción de ejecución si no se encuentra
-        return personaRepository.findById(id)
-                // Mensaje descriptivo cuando el ID no existe
-                .orElseThrow(() -> new RuntimeException("Persona no encontrada con ID: " + id));
+        Persona persona = personaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Persona no encontrada con ID: " + id));
+        adjuntarUsuarioSiEsAdministrativo(persona);
+        return persona;
     }
 
     // Filtra y retorna las personas según su tipo ('C' Conductor o 'A' Administrativo)
     @Override
+    @Transactional(readOnly = true)
     public List<Persona> listarPorTipo(String tipoPersona) {
-        // Ejecuta la búsqueda por tipo de persona en el repositorio
-        return personaRepository.findByTipoPersona(tipoPersona);
+        List<Persona> lista = personaRepository.findByTipoPersona(tipoPersona);
+        lista.forEach(this::adjuntarUsuarioSiEsAdministrativo);
+        return lista;
+    }
+
+    // Consulta pública 8.5: Total de personas agrupadas por tipo ('C' y 'A')
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> obtenerTotalPersonasPorTipo() {
+        List<Object[]> resultados = personaRepository.countPersonasByTipo();
+        Map<String, Long> respuesta = new HashMap<>();
+        respuesta.put("A", 0L);
+        respuesta.put("C", 0L);
+        for (Object[] fila : resultados) {
+            String tipo = fila[0] != null ? fila[0].toString() : "Desconocido";
+            Long total = fila[1] != null ? ((Number) fila[1]).longValue() : 0L;
+            respuesta.put(tipo, total);
+        }
+        return respuesta;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> obtenerResumenPersonas() {
+        long totalAdministrativos = personaRepository.findByTipoPersona("A").size();
+        long totalConductores = personaRepository.findByTipoPersona("C").size();
+        long totalGeneral = personaRepository.count();
+
+        Map<String, Object> resumen = new HashMap<>();
+        resumen.put("totalRegistrados", totalGeneral);
+        resumen.put("administrativos", totalAdministrativos);
+        resumen.put("conductores", totalConductores);
+        return resumen;
     }
 }

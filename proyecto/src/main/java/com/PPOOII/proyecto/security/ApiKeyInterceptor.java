@@ -33,96 +33,77 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
     @Autowired
     private UsuarioService usuarioService;
 
+    // Método auxiliar para garantizar cabeceras CORS incluso en respuestas de rechazo 401/403
+    private void agregarCabecerasCors(HttpServletResponse response) {
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "*");
+    }
+
     // Método que se ejecuta antes de cada controlador en las rutas protegidas (/api/**)
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        agregarCabecerasCors(response);
+
         // Permitir peticiones preflight CORS de tipo OPTIONS sin bloquearlas
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            // Retorna verdadero para permitir el preflight CORS
+            response.setStatus(HttpServletResponse.SC_OK);
             return true;
         }
 
         // 1. Obtener los encabezados de seguridad requeridos por la Entrega 2: x-api-key (o APIKey) y token (o Authorization)
         String apiKey = request.getHeader("x-api-key");
-        // Si no se envió 'x-api-key', verifica también el encabezado 'APIKey' del Laboratorio 2
         if (apiKey == null || apiKey.isBlank()) {
-            // Lee el encabezado alternativo 'APIKey'
             apiKey = request.getHeader("APIKey");
         }
 
-        // Lee el encabezado 'token' requerido en las pruebas del proyecto
         String token = request.getHeader("token");
-        // Si no se envió 'token', verifica el encabezado estándar 'Authorization' del Laboratorio 2
         if (token == null || token.isBlank()) {
-            // Lee el encabezado 'Authorization'
             token = request.getHeader("Authorization");
         }
 
         // 2. Validar presencia obligatoria del encabezado APIKey
         if (apiKey == null || apiKey.isBlank()) {
-            // Establece código de respuesta 401 Unauthorized
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            // Establece tipo de contenido JSON UTF-8
             response.setContentType("application/json;charset=UTF-8");
-            // Escribe el mensaje de error JSON esperado
-            response.getWriter().write("{\"error\": \"Acceso denegado: Se requiere el encabezado 'x-api-key'\"}");
-            // Detiene la ejecución de la petición
+            response.getWriter().write("{\"status\": 401, \"error\": \"Acceso denegado: Se requiere el encabezado 'x-api-key' (Modo Público/Sin Credenciales rechazado)\"}");
             return false;
         }
 
         // 3. Validar presencia obligatoria del encabezado Token / Authorization
         if (token == null || token.isBlank()) {
-            // Establece código de respuesta 401 Unauthorized
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            // Establece tipo de contenido JSON UTF-8
             response.setContentType("application/json;charset=UTF-8");
-            // Escribe el mensaje de error JSON esperado
-            response.getWriter().write("{\"error\": \"Acceso denegado: Se requiere el encabezado 'token' o 'Authorization'\"}");
-            // Detiene la ejecución de la petición
+            response.getWriter().write("{\"status\": 401, \"error\": \"Acceso denegado: Se requiere el encabezado 'token' o 'Authorization' (Bearer JWT)\"}");
             return false;
         }
 
-        // 4. Validar que el token JWT sea auténtico y no haya expirado (o sea el token administrativo de pruebas)
+        // 4. Validar que el token JWT sea auténtico y no haya expirado
         if (!usuarioService.esTokenValido(token)) {
-            // Establece código de respuesta 401 Unauthorized
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            // Establece tipo de contenido JSON UTF-8
             response.setContentType("application/json;charset=UTF-8");
-            // Escribe el mensaje de error indicando que el token JWT es inválido o expiró
-            response.getWriter().write("{\"error\": \"Acceso denegado: El token JWT enviado es inválido o ha expirado\"}");
-            // Detiene la ejecución de la petición
+            response.getWriter().write("{\"status\": 401, \"error\": \"Acceso denegado: El token JWT enviado es inválido o ha expirado\"}");
             return false;
         }
 
         // 5. Buscar el usuario correspondiente a la APIKey proporcionada
         Optional<Usuario> usuarioOpt = usuarioRepository.findByApikey(apiKey);
-        // Verifica si no existe ningún usuario con esa APIKey
         if (usuarioOpt.isEmpty()) {
-            // Establece código de respuesta 401 Unauthorized
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            // Establece tipo de contenido JSON UTF-8
             response.setContentType("application/json;charset=UTF-8");
-            // Escribe el mensaje de error JSON esperado
-            response.getWriter().write("{\"error\": \"Acceso denegado: 'x-api-key' invalida o no reconocida\"}");
-            // Detiene la ejecución de la petición
+            response.getWriter().write("{\"status\": 401, \"error\": \"Acceso denegado: 'x-api-key' inválida o revocada tras regeneración\"}");
             return false;
         }
 
         // 6. Validar que el usuario corresponda al tipo de persona ADMINISTRADOR ('A')
         Usuario usuario = usuarioOpt.get();
-        // Comprueba que la persona vinculada al usuario sea de tipo Administrativo ('A')
         if (usuario.getPersona() != null && !"A".equalsIgnoreCase(usuario.getPersona().getTipoPersona())) {
-            // Establece código de respuesta 403 Forbidden
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            // Establece tipo de contenido JSON UTF-8
             response.setContentType("application/json;charset=UTF-8");
-            // Escribe el mensaje de error JSON esperado
-            response.getWriter().write("{\"error\": \"Acceso denegado: La operacion solo puede ser consumida por un usuario ADMINISTRADOR\"}");
-            // Detiene la ejecución de la petición
+            response.getWriter().write("{\"status\": 403, \"error\": \"Acceso denegado: La operación solo puede ser consumida por un usuario ADMINISTRATIVO ('A')\"}");
             return false;
         }
 
-        // Si todas las validaciones de APIKey, Token JWT y Rol Administrativo son exitosas, permite continuar
         return true;
     }
 }

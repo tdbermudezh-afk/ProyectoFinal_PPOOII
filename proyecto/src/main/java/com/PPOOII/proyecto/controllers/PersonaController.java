@@ -23,6 +23,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 // Importación de HttpStatus para códigos de estado HTTP
 import org.springframework.http.HttpStatus;
+// Importación de MediaType para soporte de multipart/form-data
+import org.springframework.http.MediaType;
 // Importación de ResponseEntity para respuestas HTTP
 import org.springframework.http.ResponseEntity;
 // Importación de anotaciones web de Spring MVC
@@ -33,7 +35,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+// Importación de MultipartFile para cargue de licencia en PDF
+import org.springframework.web.multipart.MultipartFile;
 
 // Importación de la interfaz List de Java
 import java.util.List;
@@ -109,5 +114,16 @@ public class PersonaController {
         Persona personaActualizada = personaService.actualizarPersona(id, persona);
         // Retorna HTTP 200 OK con la persona actualizada
         return ResponseEntity.ok(personaActualizada);
+    }
+
+    // Endpoint POST /api/personas/{id}/licencia-pdf para subir el archivo PDF de la licencia y convertirlo a Base64 en LONGBLOB
+    @Operation(summary = "Subir archivo PDF de licencia de conducción", description = "Permite subir el archivo físico .pdf de la licencia de conducción de un conductor, convirtiéndolo a Base64 y guardándolo en columna LONGBLOB.")
+    @PostMapping(value = "/{id}/licencia-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Persona> subirLicenciaPdf(
+            @PathVariable Long id,
+            @RequestParam(value = "fechaVigenciaLicencia", required = false) String fechaVigenciaLicencia,
+            @RequestParam("file") MultipartFile file) {
+        Persona actualizada = personaService.cargarLicenciaPdf(id, fechaVigenciaLicencia, file);
+        return ResponseEntity.ok(actualizada);
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 // Importación de la anotación @Configuration de Spring
 import org.springframework.context.annotation.Configuration;
+// Importación de Customizer para habilitar CORS en Spring Security
+import org.springframework.security.config.Customizer;
 // Importación de HttpSecurity para configurar la cadena de seguridad web
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 // Importación de @EnableWebSecurity para habilitar Spring Security en el proyecto (Laboratorio 2)
@@ -34,6 +36,8 @@ public class WebSecurityConfig {
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         // Configura las reglas de seguridad sobre las peticiones HTTP
         http
+                // Habilita soporte CORS integrado con WebConfig
+                .cors(Customizer.withDefaults())
                 // Deshabilita la protección CSRF para permitir peticiones REST sin sesiones de navegador (Laboratorio 2)
                 .csrf(AbstractHttpConfigurer::disable)
                 // Configura los permisos de acceso a las rutas del servidor
@@ -50,4 +54,3 @@ public class WebSecurityConfig {
         return http.build();
     }
 }
-

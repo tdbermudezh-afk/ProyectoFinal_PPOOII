@@ -4,7 +4,10 @@ import jakarta.persistence.*; // Importa las anotaciones de persistencia JPA
 import java.io.Serializable; // Importa Serializable según el Laboratorio 2
 
 @Entity // Marca la clase como una entidad persistente de JPA
-@Table(name = "usuarios") // Mapea la entidad con la tabla usuarios de la base de datos
+@Table(name = "usuarios", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_usuario_idpersona", columnNames = "idpersona"),
+    @UniqueConstraint(name = "uk_usuario_apikey", columnNames = "apikey")
+}) // Mapea la entidad con la tabla usuarios garantizando relación 1:1 estricta por idpersona
 public class Usuario implements Serializable { // Implementa Serializable según el Laboratorio 2
 
     private static final long serialVersionUID = 1L; // Identificador de versión de serialización
@@ -14,7 +17,7 @@ public class Usuario implements Serializable { // Implementa Serializable según
 
     @MapsId("idPersona") // Vincula el atributo idPersona de UsuarioPK con la llave foránea
     @OneToOne(fetch = FetchType.EAGER) // Relación uno a uno con la entidad Persona
-    @JoinColumn(name = "idpersona", nullable = false) // Columna de llave foránea idpersona
+    @JoinColumn(name = "idpersona", nullable = false, unique = true) // Columna de llave foránea idpersona única (1:1)
     @com.fasterxml.jackson.annotation.JsonIgnore // Evita recursión infinita al serializar a JSON
     private Persona persona; // Entidad Persona asociada al usuario
 

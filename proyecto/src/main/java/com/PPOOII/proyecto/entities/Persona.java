@@ -1,11 +1,14 @@
 package com.PPOOII.proyecto.entities; // Define el paquete de entidades del proyecto
 
+import com.PPOOII.proyecto.entities.converters.Base64BlobConverter;
 import jakarta.persistence.*; // Importa las anotaciones de persistencia JPA
 import jakarta.validation.constraints.*; // Importa las anotaciones de validación de datos
+import org.hibernate.annotations.Check;
 import java.io.Serializable; // Importa la interfaz Serializable según el Laboratorio 1
 
 @Entity // Marca la clase como una entidad persistente de JPA
 @Table(name = "personas") // Asocia la entidad con la tabla personas de la base de datos
+@Check(constraints = "tipo_identificacion IN ('CC', 'CE', 'PASAPORTE') AND tipo_persona IN ('C', 'A')")
 public class Persona implements Serializable { // Implementa Serializable según el estándar del Laboratorio 1
 
     private static final long serialVersionUID = 1L; // Identificador de versión de serialización
@@ -34,6 +37,7 @@ public class Persona implements Serializable { // Implementa Serializable según
     @Email(message = "Formato de correo electrónico inválido") // Valida formato de email
     @NotBlank(message = "El correo es obligatorio") // Valida que el correo no esté vacío
     @Column(nullable = false, unique = true) // Columna obligatoria y única
+    @com.fasterxml.jackson.annotation.JsonAlias({"email", "correo"})
     private String correo; // Correo electrónico de la persona
 
     @NotBlank(message = "El tipo de persona es obligatorio") // Valida presencia del rol
@@ -41,13 +45,13 @@ public class Persona implements Serializable { // Implementa Serializable según
     @Column(name = "tipo_persona", nullable = false, length = 1) // Columna de 1 carácter
     private String tipoPersona; // Tipo de persona: 'C' (Conductor) o 'A' (Administrativo)
 
-    // Campo temporal para retornar el usuario generado automáticamente al crear un administrativo
+    // Campo temporal para retornar el usuario generado automáticamente al crear o consultar un administrativo
     @Transient // No se persiste como columna en la tabla personas
     private Usuario usuarioGenerado; // Referencia al usuario creado automáticamente
 
-    // ENTREGA 3: Documento de licencia de conducción en formato Base64 (BLOB/LONGTEXT)
-    @Lob // Indica almacenamiento de objeto largo
-    @Column(name = "licencia_conduccion", columnDefinition = "LONGTEXT") // Columna LONGTEXT en MySQL
+    // ENTREGA 3: Documento de licencia de conducción en formato Base64 almacenado en campo BLOB (LONGBLOB)
+    @Convert(converter = Base64BlobConverter.class) // Convierte entre String Base64 y bytes en columna LONGBLOB
+    @Column(name = "licencia_conduccion", columnDefinition = "LONGBLOB") // Columna LONGBLOB en MySQL
     private String licenciaConduccion; // Cadena en formato Base64 del PDF de la licencia
 
     // ENTREGA 3: Fecha límite de vigencia de la licencia de conducción
@@ -75,6 +79,8 @@ public class Persona implements Serializable { // Implementa Serializable según
 
     public String getCorreo() { return correo; } // Obtiene el correo electrónico
     public void setCorreo(String correo) { this.correo = correo; } // Establece el correo electrónico
+    @Transient
+    public String getEmail() { return correo; }
 
     public String getTipoPersona() { return tipoPersona; } // Obtiene el tipo de persona (C o A)
     public void setTipoPersona(String tipoPersona) { this.tipoPersona = tipoPersona; } // Establece el tipo de persona

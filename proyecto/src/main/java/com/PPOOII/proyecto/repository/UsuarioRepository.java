@@ -24,6 +24,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UsuarioPK> {
     // Consulta derivada de Spring Data JPA para buscar un usuario por su login dentro del EmbeddedId
     Optional<Usuario> findByIdLogin(String login);
 
+    // Consulta derivada de Spring Data JPA para buscar el usuario asociado a una persona por idPersona
+    Optional<Usuario> findByIdIdPersona(Long idPersona);
+
     // Consulta JPQL del Laboratorio 2 (pág. 6) que obtiene un Usuario a partir de su login
     @Query("SELECT usr FROM Usuario usr WHERE usr.id.login = :login")
     Usuario findByUsername(@Param("login") String login);

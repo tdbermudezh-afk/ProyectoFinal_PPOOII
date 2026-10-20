@@ -9,8 +9,8 @@ import com.PPOOII.proyecto.config.model.JwtRequest;
 import com.PPOOII.proyecto.config.model.JwtResponse;
 // Importación de la entidad Usuario
 import com.PPOOII.proyecto.entities.Usuario;
-// Importación del repositorio JPA de Usuario
-import com.PPOOII.proyecto.repository.UsuarioRepository;
+// Importación de la interfaz de servicio de Usuario (respetando separación estricta de capas)
+import com.PPOOII.proyecto.services.Interfaces.IUsuarioService;
 // Importación de las anotaciones Swagger OpenAPI (Laboratorio 4)
 import io.swagger.v3.oas.annotations.Operation;
 // Importación de @Content de Swagger OpenAPI
@@ -60,9 +60,9 @@ public class JwtAuthenticationController {
     @Autowired
     private UserDetailsService jwtInMemoryUserDetailsService;
 
-    // Inyección del repositorio de usuarios para validación adicional de APIKey si se envía en el header
+    // Inyección de la interfaz de servicio de usuarios para validación adicional de APIKey
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private IUsuarioService usuarioService;
 
     // Endpoint POST /authenticate que valida username, password (y opcionalmente APIKey) y retorna el token JWT firmado
     @Operation(summary = "Autenticar usuario y generar token JWT (Laboratorio 2)", description = "Recibe username y password en el cuerpo JSON (y opcionalmente el header APIKey o x-api-key) y retorna el token JWT válido por 1 mes.")
@@ -98,8 +98,8 @@ public class JwtAuthenticationController {
             String apiKeyEfectiva = (apiKeyHeader != null && !apiKeyHeader.isBlank()) ? apiKeyHeader : xApiKeyHeader;
             // Si el cliente envió una APIKey en el encabezado, verifica que corresponda al usuario autenticado (Laboratorio 2, pág. 18)
             if (apiKeyEfectiva != null && !apiKeyEfectiva.isBlank()) {
-                // Consulta la entidad Usuario completa en la base de datos
-                Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername());
+                // Consulta la entidad Usuario a través de la capa de servicio
+                Usuario usuario = usuarioService.buscarPorUsername(userDetails.getUsername());
                 // Comprueba que la APIKey coincida con la registrada en la tabla usuario
                 if (usuario == null || !apiKeyEfectiva.equals(usuario.getApikey())) {
                     // Retorna HTTP 401 Unauthorized si la APIKey no corresponde al usuario
@@ -119,4 +119,3 @@ public class JwtAuthenticationController {
         }
     }
 }
-

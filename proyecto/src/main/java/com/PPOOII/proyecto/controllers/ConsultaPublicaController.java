@@ -7,16 +7,12 @@ import com.PPOOII.proyecto.entities.Persona;
 import com.PPOOII.proyecto.entities.Trayecto;
 // Importación de la entidad Vehiculo
 import com.PPOOII.proyecto.entities.Vehiculo;
-// Importación del repositorio JPA de Persona
-import com.PPOOII.proyecto.repository.PersonaRepository;
-// Importación del repositorio JPA de Trayecto
-import com.PPOOII.proyecto.repository.TrayectoRepository;
-// Importación del repositorio JPA de VehiculoDocumento
-import com.PPOOII.proyecto.repository.VehiculoDocumentoRepository;
-// Importación del repositorio JPA de VehiculoPersona
-import com.PPOOII.proyecto.repository.VehiculoPersonaRepository;
-// Importación del repositorio JPA de Vehiculo
-import com.PPOOII.proyecto.repository.VehiculoRepository;
+// Importación de las interfaces de servicio (Separación estricta de capas @RestController -> @Service -> @Repository)
+import com.PPOOII.proyecto.services.Interfaces.IPersonaService;
+import com.PPOOII.proyecto.services.Interfaces.ITrayectoService;
+import com.PPOOII.proyecto.services.Interfaces.IVehiculoDocumentoService;
+import com.PPOOII.proyecto.services.Interfaces.IVehiculoPersonaService;
+import com.PPOOII.proyecto.services.Interfaces.IVehiculoService;
 // Importación de @Operation de Swagger OpenAPI (Laboratorio 4)
 import io.swagger.v3.oas.annotations.Operation;
 // Importación de @Content de Swagger OpenAPI (Laboratorio 4)
@@ -43,10 +39,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// Importación de LocalDate para cálculo de fechas límite
-import java.time.LocalDate;
-// Importación de HashMap para mapas de estadísticas
-import java.util.HashMap;
 // Importación de la interfaz List de Java
 import java.util.List;
 // Importación de la interfaz Map de Java
@@ -61,25 +53,25 @@ import java.util.Optional;
 @Tag(name = "Consultas Públicas", description = "Servicios de consulta pública (Entrega 2 y Front-End de Entrega 3) que no requieren autenticación (x-api-key ni token)")
 public class ConsultaPublicaController {
 
-    // Inyección del repositorio de documentos asociados a vehículos
+    // Inyección del servicio de documentos asociados a vehículos
     @Autowired
-    private VehiculoDocumentoRepository vehiculoDocumentoRepository;
+    private IVehiculoDocumentoService vehiculoDocumentoService;
 
-    // Inyección del repositorio de relación vehículo-conductor
+    // Inyección del servicio de relación vehículo-conductor
     @Autowired
-    private VehiculoPersonaRepository vehiculoPersonaRepository;
+    private IVehiculoPersonaService vehiculoPersonaService;
 
-    // Inyección del repositorio de vehículos
+    // Inyección del servicio de vehículos
     @Autowired
-    private VehiculoRepository vehiculoRepository;
+    private IVehiculoService vehiculoService;
 
-    // Inyección del repositorio de personas
+    // Inyección del servicio de personas
     @Autowired
-    private PersonaRepository personaRepository;
+    private IPersonaService personaService;
 
-    // Inyección del repositorio de trayectos para visualización pública de rutas en el mapa
+    // Inyección del servicio de trayectos para visualización pública de rutas en el mapa
     @Autowired
-    private TrayectoRepository trayectoRepo;
+    private ITrayectoService trayectoService;
 
     // Inyección de la clave de Google Maps configurada en application.properties
     @Value("${google.maps.api.key:}")
@@ -92,19 +84,19 @@ public class ConsultaPublicaController {
     })
     @GetMapping("/vehiculos/documentos-vencidos")
     public ResponseEntity<List<Vehiculo>> obtenerVehiculosDocVencidos() {
-        // Retorna HTTP 200 OK con los vehículos encontrados
-        return ResponseEntity.ok(vehiculoDocumentoRepository.findVehiculosConDocumentosVencidos());
+        // Retorna HTTP 200 OK con los vehículos encontrados mediante la capa de servicio
+        return ResponseEntity.ok(vehiculoDocumentoService.obtenerVehiculosConDocumentosVencidos());
     }
 
     // 2. Consultar todos los conductores que puedan operar
-    @Operation(summary = "Conductores autorizados para operar (PO)", description = "Retorna las personas conductoras cuyo estado operativo es 'PO' (Para Operar).")
+    @Operation(summary = "Conductores autorizados para operar (PO)", description = "Retorna las personas conductoras cuyo estado operativo es 'PO' (Puede Operar).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado de conductores autorizados obtenido con éxito", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Persona.class)))
     })
     @GetMapping("/conductores/autorizados")
     public ResponseEntity<List<Persona>> obtenerConductoresAutorizados() {
-        // Retorna HTTP 200 OK con la lista de conductores habilitados
-        return ResponseEntity.ok(vehiculoPersonaRepository.findConductoresQuePuedenOperar());
+        // Retorna HTTP 200 OK con la lista de conductores habilitados mediante la capa de servicio
+        return ResponseEntity.ok(vehiculoPersonaService.obtenerConductoresQuePuedenOperar());
     }
 
     // 3. Consultar vehículo por placa relacionando conductores y documentos
@@ -115,8 +107,8 @@ public class ConsultaPublicaController {
     })
     @GetMapping("/vehiculos/placa/{placa}/detalles")
     public ResponseEntity<Vehiculo> obtenerDetallesVehiculoPorPlaca(@PathVariable String placa) {
-        // Busca el vehículo por su número de placa
-        Optional<Vehiculo> vehiculo = vehiculoRepository.findByPlaca(placa);
+        // Busca el vehículo por su número de placa a través de la capa de servicio
+        Optional<Vehiculo> vehiculo = vehiculoService.buscarPorPlaca(placa);
         // Retorna 200 OK si existe o 404 Not Found en caso contrario
         return vehiculo.map(ResponseEntity::ok)
                 // Si no se encuentra la placa, construye respuesta 404
@@ -131,11 +123,8 @@ public class ConsultaPublicaController {
     @GetMapping("/vehiculos/documentos-por-vencer")
     public ResponseEntity<List<Vehiculo>> obtenerVehiculosDocPorVencer(
             @RequestParam(defaultValue = "30") int diasFaltantes) {
-
-        // Calcula la fecha límite sumando los días faltantes a la fecha actual
-        LocalDate fechaLimite = LocalDate.now().plusDays(diasFaltantes);
-        // Retorna los vehículos cuyos documentos vencen entre hoy y la fecha límite
-        return ResponseEntity.ok(vehiculoDocumentoRepository.findVehiculosConDocumentosPorVencer(fechaLimite));
+        // Retorna los vehículos cuyos documentos vencen entre hoy y la fecha límite mediante la capa de servicio
+        return ResponseEntity.ok(vehiculoDocumentoService.obtenerVehiculosConDocumentosPorVencer(diasFaltantes));
     }
 
     // 5. Consultar el total de personas agrupadas por tipo
@@ -145,23 +134,8 @@ public class ConsultaPublicaController {
     })
     @GetMapping("/personas/agrupadas-por-tipo")
     public ResponseEntity<Map<String, Long>> obtenerTotalPersonasPorTipo() {
-        // Ejecuta la consulta de agrupación en el repositorio de personas
-        List<Object[]> resultados = personaRepository.countPersonasByTipo();
-        // Crea el mapa donde se almacenará el conteo por cada tipo
-        Map<String, Long> respuesta = new HashMap<>();
-
-        // Recorre las filas de resultados devueltas por JPA
-        for (Object[] fila : resultados) {
-            // Extrae la clave del tipo de persona
-            String tipo = fila[0] != null ? fila[0].toString() : "Desconocido";
-            // Extrae la cantidad total para ese tipo
-            Long total = fila[1] != null ? ((Number) fila[1]).longValue() : 0L;
-            // Agrega el par clave-valor al mapa de respuesta
-            respuesta.put(tipo, total);
-        }
-
-        // Retorna HTTP 200 OK con el mapa estadístico
-        return ResponseEntity.ok(respuesta);
+        // Retorna HTTP 200 OK con el mapa estadístico calculado por el servicio de personas
+        return ResponseEntity.ok(personaService.obtenerTotalPersonasPorTipo());
     }
 
     // 6. Obtener clave de Google Maps configurada para el Front-End (Entrega 3)
@@ -183,7 +157,7 @@ public class ConsultaPublicaController {
     @GetMapping("/rutas")
     public ResponseEntity<List<String>> listarRutasPublicas() {
         // Retorna HTTP 200 OK con los códigos de ruta distintos
-        return ResponseEntity.ok(trayectoRepo.findDistinctCodigosRuta());
+        return ResponseEntity.ok(trayectoService.listarTodosLosCodigosRuta());
     }
 
     // 8. Obtener paradas y detalle de una ruta para visualización en el mapa (Entrega 3)
@@ -194,6 +168,6 @@ public class ConsultaPublicaController {
     @GetMapping("/rutas/{codigoRuta}/paradas")
     public ResponseEntity<List<Trayecto>> obtenerParadasRutaPublica(@PathVariable String codigoRuta) {
         // Retorna HTTP 200 OK con la lista de paradas ordenadas por ordenParada ascendente
-        return ResponseEntity.ok(trayectoRepo.findByCodigoRutaOrderByOrdenParadaAsc(codigoRuta));
+        return ResponseEntity.ok(trayectoService.consultarRutaPorCodigo(codigoRuta));
     }
 }

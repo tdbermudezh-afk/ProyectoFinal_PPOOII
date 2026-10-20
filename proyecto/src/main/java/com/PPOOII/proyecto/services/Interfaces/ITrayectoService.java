@@ -9,8 +9,11 @@ import java.util.Map;
 // Interfaz que define las operaciones de negocio para la gestión de Trayectos
 public interface ITrayectoService {
 
-    // Registra un nuevo trayecto validando que el vehículo tenga documentos 'Habilitado' y conductor en 'PO'
+    // Registra un nuevo trayecto validando que el vehículo tenga documentos 'Habilitado', conductor en 'PO' y usuario válido
     Trayecto crearTrayecto(Trayecto trayecto);
+
+    // Registra una ruta completa validando mínimo 2 paradas (inicial 0 y final) y máximo 7 paradas (máx 5 intermedias)
+    List<Trayecto> crearRutaCompleta(List<Trayecto> paradas);
 
     // Consulta los trayectos de una ruta específica ordenados secuencialmente
     List<Trayecto> consultarRutaPorCodigo(String codigoRuta);
@@ -33,4 +36,3 @@ public interface ITrayectoService {
     // Obtiene la lista de todos los códigos de ruta únicos registrados
     List<String> listarTodosLosCodigosRuta();
 }
-

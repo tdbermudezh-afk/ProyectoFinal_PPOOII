@@ -16,19 +16,23 @@ public interface ITrayectoExcelService { // Declaración de la interfaz ITrayect
 
     // Método 1 del Laboratorio 4 Complementario: Invoca el procedimiento almacenado CARGAR_TRAYECTOS_EXCEL
     boolean cargarDatosExcel(String idPersona, String idVehiculo, String codigoRuta, String ubicacion,
-                             String ordenParada, String latitud, String longitud, String loginUsuario, Double idCargue); // Retorna true si se insertó en trayecto_tmp
+                             String ordenParada, String latitud, String longitud, String loginUsuario, Long idCargue); // Retorna true si se insertó en trayecto_tmp
 
     // Método 2 del Laboratorio 4 Complementario: Invoca el procedimiento almacenado VALIDAR_TRAYECTOS_CARGUE
-    boolean validarDatosExcel(Double idCargue); // Retorna true si la validación se ejecutó exitosamente
+    boolean validarDatosExcel(Long idCargue); // Retorna true si la validación se ejecutó exitosamente
 
     // Método 3 del Laboratorio 4 Complementario: Invoca el procedimiento almacenado PROCESAR_TRAYECTOS_EXCEL
-    boolean procesarDatosExcel(Double idCargue); // Retorna true si el procesado hacia la tabla trayecto fue exitoso
+    boolean procesarDatosExcel(Long idCargue); // Retorna true si el procesado hacia la tabla trayecto fue exitoso
 
     // Consulta los registros asociados a un identificador numérico de cargue específico
-    List<TrayectoTmp> consultarPorIdCargue(Double idCargue); // Retorna la lista de registros temporales por idCargue
+    List<TrayectoTmp> consultarPorIdCargue(Long idCargue); // Retorna la lista de registros temporales por idCargue
 
     // Consulta el resumen estadístico de un cargue (total registros, procesados, errores)
-    Map<String, Object> obtenerResumenCargue(Double idCargue); // Retorna el balance consolidado del cargue
+    Map<String, Object> obtenerResumenCargue(Long idCargue); // Retorna el balance consolidado del cargue
+
+    // Genera en memoria un archivo Excel (.xlsx) con datos de prueba válidos y con errores para probar los 3 procedimientos
+    byte[] generarPlantillaExcelEjemplo();
+
+    // Lista todos los identificadores de cargue (idCargue) registrados en la tabla temporal
+    List<Long> listarLotesCargue();
 } // Fin de la interfaz ITrayectoExcelService
-
-

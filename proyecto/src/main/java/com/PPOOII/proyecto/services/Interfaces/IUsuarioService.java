@@ -20,5 +20,7 @@ public interface IUsuarioService {
 
     // Verifica criptográficamente si un token JWT es válido y no ha expirado
     boolean esTokenValido(String token);
-}
 
+    // Busca un usuario por su login/username
+    Usuario buscarPorUsername(String username);
+}

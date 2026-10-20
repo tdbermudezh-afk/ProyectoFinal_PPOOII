@@ -151,6 +151,10 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         } catch (ExpiredJwtException | UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
             // En caso de un token JWT expirado, adulterado o malformado, limpia el contexto de seguridad
             SecurityContextHolder.clearContext();
+            // Agrega encabezados CORS para que el navegador pueda leer el cuerpo JSON del error 401
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.setHeader("Access-Control-Allow-Headers", "*");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
             // Establece el código de estado HTTP 401 (No Autorizado)
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             // Define el tipo de contenido JSON con codificación UTF-8

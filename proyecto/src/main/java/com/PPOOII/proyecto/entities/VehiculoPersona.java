@@ -3,11 +3,13 @@ package com.PPOOII.proyecto.entities; // Define el paquete de entidades del proy
 import com.fasterxml.jackson.annotation.JsonBackReference; // Importa JsonBackReference para evitar recursión en JSON
 import jakarta.persistence.*; // Importa las anotaciones de persistencia JPA
 import jakarta.validation.constraints.Pattern; // Importa Pattern para validar el estado del conductor
+import org.hibernate.annotations.Check;
 import java.io.Serializable; // Importa Serializable según el Laboratorio 1
 import java.time.LocalDate; // Importa LocalDate para la fecha de asociación
 
 @Entity // Marca la clase como entidad persistente de JPA
 @Table(name = "vehiculo_personas") // Mapea la tabla vehiculo_personas
+@Check(constraints = "estado_conductor IN ('PO', 'EA', 'RO')")
 public class VehiculoPersona implements Serializable { // Implementa Serializable según el Laboratorio 1
 
     private static final long serialVersionUID = 1L; // Identificador de versión de serialización
@@ -49,6 +51,15 @@ public class VehiculoPersona implements Serializable { // Implementa Serializabl
 
     public String getEstadoConductor() { return estadoConductor; } // Obtiene el estado del conductor
     public void setEstadoConductor(String estadoConductor) { this.estadoConductor = estadoConductor; } // Establece el estado del conductor
+
+    @Transient
+    public Integer getVehiculoId() { return vehiculo != null ? vehiculo.getId() : null; }
+    @Transient
+    public String getVehiculoPlaca() { return vehiculo != null ? vehiculo.getPlaca() : null; }
+    @Transient
+    public String getVehiculoDescripcion() {
+        return vehiculo != null ? (vehiculo.getPlaca() + " - " + vehiculo.getMarca() + " " + vehiculo.getLinea()) : null;
+    }
 
     @Override // Sobrescribe el método toString según el Laboratorio 1
     public String toString() { // Representación textual de VehiculoPersona

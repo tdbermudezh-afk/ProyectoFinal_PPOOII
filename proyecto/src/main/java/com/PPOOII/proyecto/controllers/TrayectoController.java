@@ -51,7 +51,7 @@ public class TrayectoController {
     private ITrayectoService trayectoService;
 
     // Endpoint 0: Registrar un nuevo trayecto (parada)
-    @Operation(summary = "Registrar trayecto", description = "Crea un trayecto validando que el vehículo tenga documentos 'Habilitado' y el conductor esté 'PO'.")
+    @Operation(summary = "Registrar trayecto", description = "Crea un trayecto validando que el vehículo tenga documentos 'Habilitado', el conductor esté 'PO' y se respete el límite de paradas.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Trayecto registrado exitosamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Trayecto.class))),
             @ApiResponse(responseCode = "400", description = "Vehículo con documentos no habilitados, conductor no autorizado (distinto de PO) o datos inválidos", content = @Content),
@@ -63,6 +63,14 @@ public class TrayectoController {
         Trayecto nuevoTrayecto = trayectoService.crearTrayecto(trayecto);
         // Retorna HTTP 201 Created con el trayecto creado
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevoTrayecto);
+    }
+
+    // Endpoint 0.B: Registrar una ruta completa validando mínimo 2 paradas (inicial 0 y final) y máximo 7 paradas (máx 5 intermedias)
+    @Operation(summary = "Registrar ruta completa (mínimo 2 y máximo 7 paradas)", description = "Registra todas las paradas de un código de ruta validando mínimo 1 parada inicial (0) y 1 final, y máximo 5 paradas intermedias (7 en total).")
+    @PostMapping("/ruta")
+    public ResponseEntity<List<Trayecto>> crearRutaCompleta(@Valid @RequestBody List<Trayecto> paradas) {
+        List<Trayecto> creadas = trayectoService.crearRutaCompleta(paradas);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creadas);
     }
 
     // Endpoint 1: Consultar ruta por código de ruta visualizando paradas en orden

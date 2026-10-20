@@ -21,6 +21,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 // Importación de @Autowired para inyección de dependencias
 import org.springframework.beans.factory.annotation.Autowired;
+// Importación de HttpHeaders para descarga de plantilla Excel
+import org.springframework.http.HttpHeaders;
 // Importación de HttpStatus para códigos de estado HTTP
 import org.springframework.http.HttpStatus;
 // Importación de MediaType para soporte de multipart/form-data
@@ -38,6 +40,8 @@ import org.springframework.web.bind.annotation.RestController;
 // Importación de MultipartFile para recepción de archivos Excel (Laboratorio 4 Complementario)
 import org.springframework.web.multipart.MultipartFile;
 
+// Importación de BigDecimal para conversión segura de idCargue
+import java.math.BigDecimal;
 // Importación de la interfaz List de Java
 import java.util.List;
 // Importación de la interfaz Map de Java
@@ -77,6 +81,24 @@ public class CargueTrayectosController {
         return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
     }
 
+    // Endpoint 1.B: Descargar plantilla Excel de ejemplo (.xlsx)
+    @Operation(summary = "Descargar plantilla Excel de ejemplo", description = "Genera y descarga un archivo Excel (.xlsx) válido con columnas y ejemplos listos para probar el cargue masivo.")
+    @GetMapping("/plantilla")
+    public ResponseEntity<byte[]> descargarPlantillaEjemplo() {
+        byte[] contenido = trayectoExcelService.generarPlantillaExcelEjemplo();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Plantilla_Cargue_Trayectos_Ejemplo.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(contenido);
+    }
+
+    // Endpoint 1.C: Listar todos los IDs de lote de cargue registrados
+    @Operation(summary = "Listar lotes de cargue históricos", description = "Retorna la lista de identificadores de cargue (idCargue) registrados en trayecto_tmp del más reciente al más antiguo.")
+    @GetMapping("/lotes")
+    public ResponseEntity<List<Long>> listarLotesCargue() {
+        return ResponseEntity.ok(trayectoExcelService.listarLotesCargue());
+    }
+
     // Endpoint 2: Consulta del balance y registros cargados por identificador de cargue
     @Operation(
             summary = "Consultar registros por ID de Cargue",
@@ -90,10 +112,11 @@ public class CargueTrayectosController {
     @GetMapping("/{idCargue}")
     public ResponseEntity<Map<String, Object>> consultarPorIdCargue(
             @Parameter(description = "Identificador numérico del lote de cargue (ej. 202610170130)", required = true)
-            @PathVariable Double idCargue) {
+            @PathVariable String idCargue) {
 
+        Long idCargueLong = parsearIdCargue(idCargue);
         // Obtiene el balance estadístico y los registros asociados al idCargue
-        Map<String, Object> resumen = trayectoExcelService.obtenerResumenCargue(idCargue);
+        Map<String, Object> resumen = trayectoExcelService.obtenerResumenCargue(idCargueLong);
         // Retorna HTTP 200 OK con el mapa de resumen
         return ResponseEntity.ok(resumen);
     }
@@ -111,11 +134,21 @@ public class CargueTrayectosController {
     @GetMapping("/{idCargue}/detalle")
     public ResponseEntity<List<TrayectoTmp>> listarDetalleCrudo(
             @Parameter(description = "Identificador numérico del lote de cargue", required = true)
-            @PathVariable Double idCargue) {
+            @PathVariable String idCargue) {
 
+        Long idCargueLong = parsearIdCargue(idCargue);
         // Consulta las entidades TrayectoTmp filtradas por idCargue
-        List<TrayectoTmp> detalle = trayectoExcelService.consultarPorIdCargue(idCargue);
+        List<TrayectoTmp> detalle = trayectoExcelService.consultarPorIdCargue(idCargueLong);
         // Retorna HTTP 200 OK con la lista de registros temporales
         return ResponseEntity.ok(detalle);
+    }
+
+    // Convierte de forma segura cualquier representación numérica (entera, decimal o notación científica) a Long
+    private Long parsearIdCargue(String valor) {
+        try {
+            return new BigDecimal(valor.trim()).longValue();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("El identificador de cargue '" + valor + "' no es un número válido.");
+        }
     }
 }

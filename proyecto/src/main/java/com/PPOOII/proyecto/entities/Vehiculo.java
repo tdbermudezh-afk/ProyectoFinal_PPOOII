@@ -7,12 +7,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.Check;
 import java.io.Serializable;
 import java.util.List;
 
 // Entidad JPA que representa la tabla 'vehiculo' en la base de datos MySQL
 @Entity
 @Table(name = "vehiculo")
+@Check(constraints = "tipo_vehiculo IN ('Automóvil', 'Motocicleta') AND tipo_servicio IN ('Pu', 'Pr', 'Público', 'Publico', 'Privado') AND tipo_combustible IN ('Gasolina', 'Gas', 'Disel', 'Diesel')")
 public class Vehiculo implements Serializable {
 
     // Identificador de versión para la serialización de la entidad según el Laboratorio 1
@@ -46,13 +48,13 @@ public class Vehiculo implements Serializable {
     @Column(nullable = false)
     private Integer modelo;
 
-    // Tipo de servicio: restringido a 'Pu' (Público) o 'Pr' (Privado)
+    // Tipo de servicio: restringido a 'Pu'/'Público' o 'Pr'/'Privado'
     @NotBlank(message = "El tipo de servicio no puede estar vacío")
-    @Pattern(regexp = "^(Pu|Pr)$", message = "El tipo de servicio debe ser 'Pu' (Público) o 'Pr' (Privado)")
-    @Column(name = "tipo_servicio", nullable = false, length = 2)
+    @Pattern(regexp = "^(Pu|Pr|Público|Publico|Privado)$", message = "El tipo de servicio debe ser 'Pu' (Público) o 'Pr' (Privado)")
+    @Column(name = "tipo_servicio", nullable = false, length = 15)
     private String tipoServicio;
 
-    // Tipo de combustible: restringido a Gasolina, Gas o Disel
+    // Tipo de combustible: restringido a Gasolina, Gas o Disel / Diesel
     @NotBlank(message = "El tipo de combustible no puede estar vacío")
     @Pattern(regexp = "^(Gasolina|Gas|Disel|Diesel)$", message = "El tipo de combustible debe ser 'Gasolina', 'Gas' o 'Disel'")
     @Column(name = "tipo_combustible", nullable = false, length = 20)
