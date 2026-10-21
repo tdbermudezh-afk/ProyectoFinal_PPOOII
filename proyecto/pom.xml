@@ -98,6 +98,15 @@
 			<artifactId>jjwt-jackson</artifactId>
 			<version>0.11.5</version>
 			<scope>runtime</scope>
+<<<<<<< HEAD
+=======
+		</dependency>
+
+		<!-- RabbitMQ Starter para colas de mensajería -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+>>>>>>> f835d9a04cf384986793c760c33b14b87e3c8e8c
 		</dependency>
 	</dependencies>
 

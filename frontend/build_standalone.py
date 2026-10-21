@@ -1,7 +1,8 @@
 import os
 import re
 
-FRONTEND_DIR = r"d:\ProyectoFinal_PPOOII\frontend"
+FRONTEND_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(FRONTEND_DIR)
 SRC_DIR = os.path.join(FRONTEND_DIR, "src")
 
 FILES_ORDER = [
@@ -147,8 +148,8 @@ html_output = f"""<!doctype html>
 
 targets = [
     os.path.join(FRONTEND_DIR, "dist", "index.html"),
-    r"d:\ProyectoFinal_PPOOII\proyecto\src\main\resources\static\index.html",
-    r"d:\ProyectoFinal_PPOOII\proyecto\target\classes\static\index.html",
+    os.path.join(REPO_ROOT, "proyecto", "src", "main", "resources", "static", "index.html"),
+    os.path.join(REPO_ROOT, "proyecto", "target", "classes", "static", "index.html"),
 ]
 
 for t in targets:

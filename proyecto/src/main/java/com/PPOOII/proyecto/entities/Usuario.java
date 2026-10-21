@@ -15,11 +15,19 @@ public class Usuario implements Serializable { // Implementa Serializable según
     @EmbeddedId // Define la llave primaria compuesta embebida (idPersona, login)
     private UsuarioPK id; // Instancia de la clave primaria compuesta UsuarioPK
 
+<<<<<<< HEAD
     @MapsId("idPersona") // Vincula el atributo idPersona de UsuarioPK con la llave foránea
     @OneToOne(fetch = FetchType.EAGER) // Relación uno a uno con la entidad Persona
     @JoinColumn(name = "idpersona", nullable = false, unique = true) // Columna de llave foránea idpersona única (1:1)
     @com.fasterxml.jackson.annotation.JsonIgnore // Evita recursión infinita al serializar a JSON
     private Persona persona; // Entidad Persona asociada al usuario
+=======
+    @MapsId("idPersona")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "idpersona", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Persona persona;
+>>>>>>> f835d9a04cf384986793c760c33b14b87e3c8e8c
 
     @Column(nullable = false) // Columna obligatoria para la contraseña
     private String password; // Contraseña de acceso del usuario
