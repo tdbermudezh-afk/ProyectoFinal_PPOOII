@@ -58,7 +58,9 @@ public class WebConfig implements WebMvcConfigurer {
                         // Servicios de consulta pública sin autenticación (Entrega 2 y 3)
                         "/api/public/**",
                         // Variante pública adicional
-                        "/api/publico/**"
+                        "/api/publico/**",
+                        // Monitor y ejecución bajo demanda de tareas automáticas (@Scheduled)
+                        "/api/tareas-programadas/**"
                 );
     }
 }
