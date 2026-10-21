@@ -38,8 +38,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 // Importación de DateTimeFormatter para formatear la hora de ejecución (Laboratorio 3, pág. 10)
 import java.time.format.DateTimeFormatter;
-// Importación de la interfaz List de Java
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 // Componente que orquesta las tareas programadas periódicas en segundo plano según el Laboratorio 3 (págs. 10 y 15)
 @Component
@@ -50,6 +50,7 @@ public class ScheduledTasks {
 
     // Formateador de fecha y hora para los mensajes de trazabilidad (Laboratorio 3, pág. 10)
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final DateTimeFormatter fullIsoFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // Inyección del cliente Geocoder de Google Maps
     @Autowired
@@ -71,39 +72,79 @@ public class ScheduledTasks {
     @Autowired
     private TrayectoRepository trayectoRepository;
 
+    // Estructuras en memoria para auditoría y visualización en tiempo real desde el Frontend
+    private final Deque<Map<String, Object>> historialEjecuciones = new ConcurrentLinkedDeque<>();
+    private static final int MAX_HISTORIAL = 40;
+
+    private String ultimaEjecucionLicencias = "Aún no ejecutada";
+    private String ultimaEjecucionDocumentos = "Aún no ejecutada";
+    private String ultimaEjecucionGeocodificacion = "Aún no ejecutada";
+
+    private int totalLicenciasRestringidas = 0;
+    private int totalDocumentosVencidosActualizados = 0;
+    private int totalTrayectosGeocodificados = 0;
+
+    private void registrarEventoHistorial(String tarea, String tipoEjecucion, int analizados, int modificados, String detalle) {
+        Map<String, Object> evento = new LinkedHashMap<>();
+        evento.put("timestamp", LocalDateTime.now().format(fullIsoFormatter));
+        evento.put("tarea", tarea);
+        evento.put("tipo", tipoEjecucion); // AUTOMATICA o MANUAL
+        evento.put("analizados", analizados);
+        evento.put("modificados", modificados);
+        evento.put("detalle", detalle);
+
+        historialEjecuciones.addFirst(evento);
+        while (historialEjecuciones.size() > MAX_HISTORIAL) {
+            historialEjecuciones.removeLast();
+        }
+    }
+
     // -----------------------------------------------------------------------------------------
-    // TAREA 1: Verificación de vigencia de licencias de conductores (Cada 2 minutos = 120.000 ms)
+    // TAREA 1: Verificación de vigencia de licencias de conductores (Cada 2 minutos = 120.000 ms, inicio a los 5s)
     // Cambia el estado del conductor en la relación con el vehículo a 'RO' (Restringido para Operar)
     // -----------------------------------------------------------------------------------------
-    @Scheduled(fixedRate = 120000)
+    @Scheduled(fixedRate = 120000, initialDelay = 5000)
     @Transactional
     public void verificarVigenciaLicenciasConductores() {
-        // Registra el inicio de ejecución de la tarea programada con el formato del Laboratorio 3
-        logger.info("Cron Task [Vigencia Licencias] :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+        ejecutarVerificarLicenciasInterno("AUTOMATICA");
+    }
+
+    @Transactional
+    public Map<String, Object> ejecutarVerificarLicenciasManual() {
+        return ejecutarVerificarLicenciasInterno("MANUAL");
+    }
+
+    private Map<String, Object> ejecutarVerificarLicenciasInterno(String origen) {
+        String horaEjecucion = dateTimeFormatter.format(LocalDateTime.now());
+        ultimaEjecucionLicencias = LocalDateTime.now().format(fullIsoFormatter);
+        logger.info("Cron Task [Vigencia Licencias] ({}) :: Execution Time - {}", origen, horaEjecucion);
+
+        int totalAnalizados = 0;
+        int totalCambiados = 0;
+        List<String> detallesCambios = new ArrayList<>();
 
         try {
-            // Consultar conductores cuya licencia esté vencida frente a la fecha actual
-            List<Persona> conductoresVencidos = personaRepository.findConductoresConLicenciaVencida();
+            LocalDate hoy = LocalDate.now();
+            List<Persona> conductoresVencidos = personaRepository.findConductoresConLicenciaVencida(hoy);
+            totalAnalizados = conductoresVencidos.size();
 
-            // Itera sobre cada conductor con licencia vencida encontrado
             for (Persona conductor : conductoresVencidos) {
-                // Obtener todas las relaciones del conductor con vehículos
                 List<VehiculoPersona> relaciones = vehiculoPersonaRepository.findByPersonaId(conductor.getId());
-
-                // Recorre cada relación vehículo-conductor para restringir su operación
                 for (VehiculoPersona rel : relaciones) {
-                    // Si el conductor no está ya en RO, actualizar su estado a RO
                     if (!"RO".equalsIgnoreCase(rel.getEstadoConductor())) {
-                        // Cambia el estado operativo a 'RO' (Restringido para Operar)
+                        String anteriorEstado = rel.getEstadoConductor();
                         rel.setEstadoConductor("RO");
-                        // Persiste el cambio en la base de datos inmediatamente
                         vehiculoPersonaRepository.saveAndFlush(rel);
-                        // Registra alerta detallada en el log
-                        logger.warn("[ALERTA LICENCIA VENCIDA] Conductor '{} {}' (ID: {}) con licencia vencida el {}. Asignación ID: {} cambiada a 'RO'.",
-                                conductor.getNombres(), conductor.getApellidos(), conductor.getId(),
-                                conductor.getFechaVigenciaLicencia(), rel.getId());
+                        totalCambiados++;
+                        totalLicenciasRestringidas++;
 
-                        // Notificación aislada en try/catch independiente para jamás afectar la transacción de BD
+                        String msg = String.format("Conductor '%s %s' (CC %s, vigencia: %s) cambió asignación vehículo #%s de '%s' a 'RO'",
+                                conductor.getNombres(), conductor.getApellidos(), conductor.getIdentificacion(),
+                                conductor.getFechaVigenciaLicencia(), rel.getVehiculo() != null ? rel.getVehiculo().getPlaca() : rel.getId(),
+                                anteriorEstado);
+                        detallesCambios.add(msg);
+                        logger.warn("[ALERTA LICENCIA VENCIDA] {}", msg);
+
                         try {
                             enviarNotificacionRestriccionConductor(conductor, rel);
                         } catch (Exception mailEx) {
@@ -112,100 +153,244 @@ public class ScheduledTasks {
                     }
                 }
             }
+
+            String resumen = totalCambiados > 0
+                    ? ("Se restringieron " + totalCambiados + " asignación(es) a estado 'RO'.")
+                    : ("Sin cambios requeridos: " + totalAnalizados + " conductor(es) con licencia vencida ya se encontraban en 'RO'.");
+
+            registrarEventoHistorial("1. Vigencia de Licencias (-> RO)", origen, totalAnalizados, totalCambiados, resumen);
+
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("tarea", "Vigencia Licencias");
+            resultado.put("origen", origen);
+            resultado.put("ejecutadoEn", ultimaEjecucionLicencias);
+            resultado.put("conductoresVencidosDetectados", totalAnalizados);
+            resultado.put("relacionesCambiadasARO", totalCambiados);
+            resultado.put("detalles", detallesCambios);
+            resultado.put("mensaje", resumen);
+            return resultado;
         } catch (Exception e) {
-            // Registra cualquier excepción ocurrida durante la tarea sin detener el planificador
-            logger.error("[ERROR EN TAREA LICENCIAS] Ocurrió una excepción: {}", e.getMessage());
+            logger.error("[ERROR EN TAREA LICENCIAS] Ocurrió una excepción: {}", e.getMessage(), e);
+            registrarEventoHistorial("1. Vigencia de Licencias (-> RO)", origen, totalAnalizados, 0, "Error: " + e.getMessage());
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("error", e.getMessage());
+            return err;
         }
     }
 
-    // Método auxiliar aislado para trazabilidad de notificación al conductor restringido
     private void enviarNotificacionRestriccionConductor(Persona conductor, VehiculoPersona rel) {
         logger.info("[NOTIFICACION ENVIADA] Destinatario: {} | Asunto: Restricción Operativa (RO) | Vehículo ID: {} | Motivo: Licencia vencida el {}",
-                conductor.getCorreo(), rel.getVehiculo().getId(), conductor.getFechaVigenciaLicencia());
+                conductor.getCorreo(), rel.getVehiculo() != null ? rel.getVehiculo().getId() : "N/A", conductor.getFechaVigenciaLicencia());
     }
 
     // -----------------------------------------------------------------------------------------
-    // TAREA 2: Verificación de vigencia de documentos asociados al vehículo (Cada 2 minutos = 120.000 ms)
+    // TAREA 2: Verificación de vigencia de documentos asociados al vehículo (Cada 2 minutos = 120.000 ms, inicio a los 5s)
     // Cambia el estado del documento asociado al vehículo a 'Vencido'
     // -----------------------------------------------------------------------------------------
-    @Scheduled(fixedRate = 120000)
+    @Scheduled(fixedRate = 120000, initialDelay = 5000)
     @Transactional
     public void verificarVigenciaDocumentosVehiculos() {
-        // Registra el inicio de ejecución de la tarea programada con el formato del Laboratorio 3
-        logger.info("Cron Task [Vigencia Documentos Vehiculares] :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+        ejecutarVerificarDocumentosInterno("AUTOMATICA");
+    }
+
+    @Transactional
+    public Map<String, Object> ejecutarVerificarDocumentosManual() {
+        return ejecutarVerificarDocumentosInterno("MANUAL");
+    }
+
+    private Map<String, Object> ejecutarVerificarDocumentosInterno(String origen) {
+        String horaEjecucion = dateTimeFormatter.format(LocalDateTime.now());
+        ultimaEjecucionDocumentos = LocalDateTime.now().format(fullIsoFormatter);
+        logger.info("Cron Task [Vigencia Documentos Vehiculares] ({}) :: Execution Time - {}", origen, horaEjecucion);
+
+        int totalAnalizados = 0;
+        int totalCambiados = 0;
+        List<String> detallesCambios = new ArrayList<>();
 
         try {
-            // Obtiene la fecha actual del sistema
             LocalDate hoy = LocalDate.now();
-            // Recupera todos los documentos asociados a vehículos
             List<VehiculoDocumento> todosLosDocumentos = vehiculoDocumentoRepository.findAll();
+            totalAnalizados = todosLosDocumentos.size();
 
-            // Recorre cada documento para verificar su fecha de vencimiento
             for (VehiculoDocumento doc : todosLosDocumentos) {
-                // Si la fecha de vencimiento es anterior a hoy y el estado no es ya 'Vencido'
                 if (doc.getFechaVencimiento() != null && doc.getFechaVencimiento().isBefore(hoy)) {
-                    // Comprueba si el estado actual es distinto de 'Vencido'
                     if (!"Vencido".equalsIgnoreCase(doc.getEstado())) {
-                        // Actualiza el estado del documento a 'Vencido'
+                        String anterior = doc.getEstado();
                         doc.setEstado("Vencido");
-                        // Guarda el cambio en la base de datos inmediatamente
                         vehiculoDocumentoRepository.saveAndFlush(doc);
-                        // Registra alerta detallada en el log
-                        logger.warn("[ALERTA DOCUMENTO VENCIDO] Documento ID: {} del vehículo ID: {} venció el {}. Estado actualizado a 'Vencido'.",
-                                doc.getId(), doc.getVehiculo().getId(), doc.getFechaVencimiento());
+                        totalCambiados++;
+                        totalDocumentosVencidosActualizados++;
+
+                        String placa = (doc.getVehiculo() != null) ? doc.getVehiculo().getPlaca() : "ID " + doc.getVehiculoId();
+                        String nomDoc = (doc.getDocumento() != null) ? doc.getDocumento().getNombre() : "Doc #" + doc.getId();
+                        String msg = String.format("Documento '%s' (ID %d) del vehículo %s venció el %s. Cambió de '%s' a 'Vencido'.",
+                                nomDoc, doc.getId(), placa, doc.getFechaVencimiento(), anterior);
+                        detallesCambios.add(msg);
+                        logger.warn("[ALERTA DOCUMENTO VENCIDO] {}", msg);
                     }
                 }
             }
+
+            String resumen = totalCambiados > 0
+                    ? ("Se actualizaron " + totalCambiados + " documento(s) expirados al estado 'Vencido'.")
+                    : ("Sin cambios requeridos: todos los documentos expirados (" + totalAnalizados + " analizados) ya se encuentran en estado 'Vencido'.");
+
+            registrarEventoHistorial("2. Vigencia de Documentos (-> Vencido)", origen, totalAnalizados, totalCambiados, resumen);
+
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("tarea", "Vigencia Documentos Vehiculares");
+            resultado.put("origen", origen);
+            resultado.put("ejecutadoEn", ultimaEjecucionDocumentos);
+            resultado.put("documentosAnalizados", totalAnalizados);
+            resultado.put("documentosActualizadosAVencido", totalCambiados);
+            resultado.put("detalles", detallesCambios);
+            resultado.put("mensaje", resumen);
+            return resultado;
         } catch (Exception e) {
-            // Registra cualquier excepción ocurrida durante la tarea
-            logger.error("[ERROR EN TAREA DOCUMENTOS] Ocurrió una excepción: {}", e.getMessage());
+            logger.error("[ERROR EN TAREA DOCUMENTOS] Ocurrió una excepción: {}", e.getMessage(), e);
+            registrarEventoHistorial("2. Vigencia de Documentos (-> Vencido)", origen, totalAnalizados, 0, "Error: " + e.getMessage());
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("error", e.getMessage());
+            return err;
         }
     }
 
     // -----------------------------------------------------------------------------------------
-    // TAREA 3: Geocodificación de trayectos pendientes vía Google Maps API (Cada 90 segundos = 90.000 ms)
+    // TAREA 3: Geocodificación de trayectos pendientes vía Google Maps / Geocoder (Cada 90 segundos = 90.000 ms, inicio a los 5s)
     // Extrae coordenadas (latitud y longitud) de la ubicación y las persiste en la base de datos
     // -----------------------------------------------------------------------------------------
-    @Scheduled(fixedRate = 90000)
+    @Scheduled(fixedRate = 90000, initialDelay = 5000)
     @Transactional
     public void geocodificarTrayectosPendientes() {
-        // Registra el inicio de ejecución de la tarea de geocodificación
-        logger.info("Cron Task [Geocodificación Google Maps] :: Execution Time - {}", dateTimeFormatter.format(LocalDateTime.now()));
+        ejecutarGeocodificacionInterno("AUTOMATICA");
+    }
+
+    @Transactional
+    public Map<String, Object> ejecutarGeocodificacionManual() {
+        return ejecutarGeocodificacionInterno("MANUAL");
+    }
+
+    private Map<String, Object> ejecutarGeocodificacionInterno(String origen) {
+        String horaEjecucion = dateTimeFormatter.format(LocalDateTime.now());
+        ultimaEjecucionGeocodificacion = LocalDateTime.now().format(fullIsoFormatter);
+        logger.info("Cron Task [Geocodificación Google Maps] ({}) :: Execution Time - {}", origen, horaEjecucion);
+
+        int totalPendientes = 0;
+        int totalGeocodificados = 0;
+        List<String> detallesCambios = new ArrayList<>();
 
         try {
-            // Consultar trayectos con coordenadas nulas o iguales a 0
             List<Trayecto> pendientes = trayectoRepository.findTrayectosSinCoordenadas();
+            totalPendientes = pendientes.size();
 
-            // Si no existen trayectos pendientes por geocodificar, finaliza la ejecución
             if (pendientes.isEmpty()) {
-                // Registra mensaje informativo en consola
-                logger.info("[CRON GEOCODIFICACION] Todos los trayectos se encuentran debidamente geocodificados.");
-                // Termina el método
-                return;
+                String msg = "Todos los trayectos se encuentran debidamente geocodificados.";
+                logger.info("[CRON GEOCODIFICACION] {}", msg);
+                registrarEventoHistorial("3. Geocodificación Google Maps", origen, 0, 0, msg);
+
+                Map<String, Object> resultado = new LinkedHashMap<>();
+                resultado.put("tarea", "Geocodificación Google Maps");
+                resultado.put("origen", origen);
+                resultado.put("ejecutadoEn", ultimaEjecucionGeocodificacion);
+                resultado.put("pendientes", 0);
+                resultado.put("geocodificados", 0);
+                resultado.put("mensaje", msg);
+                return resultado;
             }
 
-            // Recorre cada trayecto pendiente para consultar sus coordenadas en Google Maps
             for (Trayecto trayecto : pendientes) {
-                // Registra la parada que se va a geocodificar
                 logger.info("Geocodificando parada: '{}' (Trayecto ID: {})", trayecto.getUbicacion(), trayecto.getId());
-                // Invoca el componente Geocoder
                 double[] coordenadas = geocoder.geocodificarDireccion(trayecto.getUbicacion());
 
-                // Si se obtuvieron coordenadas válidas, actualiza la entidad Trayecto
                 if (coordenadas != null && coordenadas.length == 2) {
-                    // Asigna la latitud obtenida
                     trayecto.setLatitud(coordenadas[0]);
-                    // Asigna la longitud obtenida
                     trayecto.setLongitud(coordenadas[1]);
-                    // Guarda el trayecto actualizado en la base de datos inmediatamente
                     trayectoRepository.saveAndFlush(trayecto);
-                    // Registra las coordenadas asignadas en el log
-                    logger.info("Coordenadas asignadas al Trayecto ID {}: Lat {}, Lng {}", trayecto.getId(), coordenadas[0], coordenadas[1]);
+                    totalGeocodificados++;
+                    totalTrayectosGeocodificados++;
+
+                    String detalle = String.format("Trayecto #%d (Ruta '%s', Parada #%d - '%s') geocodificado: [Lat: %.4f, Lng: %.4f]",
+                            trayecto.getId(), trayecto.getCodigoRuta(), trayecto.getOrdenParada(),
+                            trayecto.getUbicacion(), coordenadas[0], coordenadas[1]);
+                    detallesCambios.add(detalle);
+                    logger.info("{}", detalle);
                 }
             }
+
+            String resumen = String.format("Se geocodificaron %d de %d parada(s) pendiente(s).", totalGeocodificados, totalPendientes);
+            registrarEventoHistorial("3. Geocodificación Google Maps", origen, totalPendientes, totalGeocodificados, resumen);
+
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("tarea", "Geocodificación Google Maps");
+            resultado.put("origen", origen);
+            resultado.put("ejecutadoEn", ultimaEjecucionGeocodificacion);
+            resultado.put("pendientes", totalPendientes);
+            resultado.put("geocodificados", totalGeocodificados);
+            resultado.put("detalles", detallesCambios);
+            resultado.put("mensaje", resumen);
+            return resultado;
         } catch (Exception e) {
-            // Registra cualquier excepción ocurrida durante la geocodificación
-            logger.error("[ERROR EN TAREA GEOCODIFICACION] Ocurrió una excepción: {}", e.getMessage());
+            logger.error("[ERROR EN TAREA GEOCODIFICACION] Ocurrió una excepción: {}", e.getMessage(), e);
+            registrarEventoHistorial("3. Geocodificación Google Maps", origen, totalPendientes, 0, "Error: " + e.getMessage());
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("error", e.getMessage());
+            return err;
         }
+    }
+
+    // Consulta de estado consolidado en vivo de las 3 tareas programadas
+    public Map<String, Object> obtenerEstadoConsolidado() {
+        Map<String, Object> estado = new LinkedHashMap<>();
+        LocalDate hoy = LocalDate.now();
+
+        // Conteos en vivo
+        long conductoresVencidos = personaRepository.findConductoresConLicenciaVencida(hoy).size();
+        long relacionesEnRO = vehiculoPersonaRepository.findByEstadoConductor("RO").size();
+        long relacionesEnPO = vehiculoPersonaRepository.findByEstadoConductor("PO").size();
+        long relacionesEnEA = vehiculoPersonaRepository.findByEstadoConductor("EA").size();
+
+        long docsExpirados = vehiculoDocumentoRepository.findAll().stream()
+                .filter(d -> d.getFechaVencimiento() != null && d.getFechaVencimiento().isBefore(hoy))
+                .count();
+        long docsEnVencido = vehiculoDocumentoRepository.findAll().stream()
+                .filter(d -> "Vencido".equalsIgnoreCase(d.getEstado()))
+                .count();
+
+        long trayectosPendientesGeo = trayectoRepository.findTrayectosSinCoordenadas().size();
+
+        Map<String, Object> tarea1 = new LinkedHashMap<>();
+        tarea1.put("nombre", "Verificación de Vigencia de Licencias de Conducción");
+        tarea1.put("frecuencia", "Cada 2 minutos (120.000 ms)");
+        tarea1.put("ultimaEjecucion", ultimaEjecucionLicencias);
+        tarea1.put("conductoresLicenciaVencida", conductoresVencidos);
+        tarea1.put("relacionesEnRO", relacionesEnRO);
+        tarea1.put("relacionesEnPO", relacionesEnPO);
+        tarea1.put("relacionesEnEA", relacionesEnEA);
+        tarea1.put("totalRestringidasHistorico", totalLicenciasRestringidas);
+
+        Map<String, Object> tarea2 = new LinkedHashMap<>();
+        tarea2.put("nombre", "Actualización de Documentos Vehiculares Expirados");
+        tarea2.put("frecuencia", "Cada 2 minutos (120.000 ms)");
+        tarea2.put("ultimaEjecucion", ultimaEjecucionDocumentos);
+        tarea2.put("documentosConFechaExpirada", docsExpirados);
+        tarea2.put("documentosEnEstadoVencido", docsEnVencido);
+        tarea2.put("totalActualizadosHistorico", totalDocumentosVencidosActualizados);
+
+        Map<String, Object> tarea3 = new LinkedHashMap<>();
+        tarea3.put("nombre", "Geocodificación Automática de Trayectos (Google Maps / Geocoder)");
+        tarea3.put("frecuencia", "Cada 90 segundos (90.000 ms)");
+        tarea3.put("ultimaEjecucion", ultimaEjecucionGeocodificacion);
+        tarea3.put("trayectosPendientesCoordenadas", trayectosPendientesGeo);
+        tarea3.put("totalGeocodificadosHistorico", totalTrayectosGeocodificados);
+
+        estado.put("timestampServidor", LocalDateTime.now().format(fullIsoFormatter));
+        estado.put("fechaHoy", hoy.toString());
+        estado.put("tarea1Licencias", tarea1);
+        estado.put("tarea2Documentos", tarea2);
+        tarea3.put("geocoderDisponible", true);
+        estado.put("tarea3Geocodificacion", tarea3);
+        estado.put("historialReciente", new ArrayList<>(historialEjecuciones));
+
+        return estado;
     }
 }
