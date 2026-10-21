@@ -177,13 +177,54 @@ export default function Modulo3Entrega3({ activeSubTab, setActiveSubTab }) {
     });
 
     if (latLngs.length > 1) {
-      const polyline = L.polyline(latLngs, {
-        color: '#6366f1',
-        weight: 4,
-        opacity: 0.85,
+      // 1. Trazado preliminar inmediato mientras responde el servicio de ruteo
+      const tempPolyline = L.polyline(latLngs, {
+        color: '#818cf8',
+        weight: 3,
+        opacity: 0.5,
         dashArray: '6, 6'
       });
-      layerGroup.addLayer(polyline);
+      layerGroup.addLayer(tempPolyline);
+
+      // 2. Consulta al servicio público OSRM (Open Source Routing Machine) para seguir las calles reales
+      const coordsString = latLngs.map(c => `${c[1]},${c[0]}`).join(';');
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+
+      fetch(osrmUrl)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            // Elimina la línea recta provisional
+            layerGroup.removeLayer(tempPolyline);
+
+            // Coordenadas de la geometría de calles (OSRM devuelve [lon, lat])
+            const streetCoords = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+
+            // Trazado de ruta sólida profesional por las calles
+            const routePolyline = L.polyline(streetCoords, {
+              color: '#4f46e5',
+              weight: 5,
+              opacity: 0.9,
+              lineJoin: 'round',
+              lineCap: 'round'
+            });
+
+            // Resplandor / sombra exterior para resaltar la vía
+            const routeGlow = L.polyline(streetCoords, {
+              color: '#818cf8',
+              weight: 8,
+              opacity: 0.35,
+              lineJoin: 'round',
+              lineCap: 'round'
+            });
+
+            layerGroup.addLayer(routeGlow);
+            layerGroup.addLayer(routePolyline);
+          }
+        })
+        .catch(err => {
+          console.warn('No fue posible obtener la ruta por calles desde OSRM, manteniendo trazado directo:', err);
+        });
     }
 
     if (latLngs.length > 0 && mapInstanceRef.current) {
