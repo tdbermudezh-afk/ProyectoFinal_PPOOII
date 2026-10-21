@@ -4,11 +4,17 @@ package com.PPOOII.proyecto.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import org.hibernate.annotations.Check;
+import java.io.Serializable;
 
 // Entidad JPA que representa la tabla paramétrica o de configuración 'documento'
 @Entity
 @Table(name = "documento")
-public class Documento {
+@Check(constraints = "aplica_a IN ('A', 'M', 'AM') AND obligatorio IN ('RA', 'RM', 'RR', 'NO', 'NR')")
+public class Documento implements Serializable {
+
+    // Identificador de versión de serialización según el Laboratorio 1
+    private static final long serialVersionUID = 1L;
 
     // Identificador único del documento parametrizado (Clave primaria autoincremental)
     @Id
@@ -31,10 +37,10 @@ public class Documento {
     @Column(name = "aplica_a", nullable = false, length = 2)
     private String aplicaA;
 
-    // Carácter de obligatoriedad según el vehículo: 'RA' (Automóvil), 'RM' (Motocicleta) o 'RR' (Requerido para ambos)
+    // Carácter de obligatoriedad según el vehículo: 'RA' (Automóvil), 'RM' (Motocicleta), 'RR' (Requerido para ambos) o 'NO'/'NR' (No obligatorio)
     @NotBlank(message = "El campo obligatorio no puede estar vacío")
-    @Pattern(regexp = "^(RA|RM|RR)$", message = "El campo obligatorio debe ser 'RA' (Automóvil), 'RM' (Motocicleta) o 'RR' (Requerido para ambos)")
-    @Column(nullable = false, length = 2)
+    @Pattern(regexp = "^(RA|RM|RR|NO|NR)$", message = "El campo obligatorio debe ser 'RA' (Automóvil), 'RM' (Motocicleta), 'RR' (Requerido para ambos) o 'NO'/'NR' (No obligatorio)")
+    @Column(nullable = false, length = 5)
     private String obligatorio;
 
     // Descripción detallada sobre el propósito o alcance del documento
@@ -62,4 +68,9 @@ public class Documento {
 
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    @Override // Sobrescribe el método toString según el Laboratorio 1
+    public String toString() { // Representación textual de Documento
+        return "Documento [id=" + this.id + ", codigo=" + this.codigo + ", nombre=" + this.nombre + ", aplicaA=" + this.aplicaA + "]";
+    }
 }

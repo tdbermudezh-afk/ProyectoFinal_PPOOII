@@ -4,12 +4,14 @@ package com.PPOOII.proyecto.services;
 // Importaciones de entidades, repositorios y excepciones
 import com.PPOOII.proyecto.entities.Persona;
 import com.PPOOII.proyecto.entities.Trayecto;
+import com.PPOOII.proyecto.entities.Usuario;
 import com.PPOOII.proyecto.entities.Vehiculo;
 import com.PPOOII.proyecto.entities.VehiculoDocumento;
 import com.PPOOII.proyecto.entities.VehiculoPersona;
 import com.PPOOII.proyecto.exceptions.ResourceNotFoundException;
 import com.PPOOII.proyecto.repository.PersonaRepository;
 import com.PPOOII.proyecto.repository.TrayectoRepository;
+import com.PPOOII.proyecto.repository.UsuarioRepository;
 import com.PPOOII.proyecto.repository.VehiculoDocumentoRepository;
 import com.PPOOII.proyecto.repository.VehiculoPersonaRepository;
 import com.PPOOII.proyecto.repository.VehiculoRepository;
@@ -21,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 // Importaciones de estructuras y utilidades de Java
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +54,25 @@ public class TrayectoService implements ITrayectoService {
     @Autowired
     private VehiculoPersonaRepository vehiculoPersonaRepository;
 
+    // Repositorio de usuarios para validar el login del usuario que registra el trayecto
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     // Método transaccional para crear un nuevo trayecto validando las reglas de negocio de la Entrega 3
     @Override
     @Transactional
     public Trayecto crearTrayecto(Trayecto trayecto) {
-        // 1. Validar que la persona exista y sea de tipo CONDUCTOR ('C')
+        // 0. Validar que el login de usuario exista como Usuario administrativo registrado
+        if (trayecto.getLogin() == null || trayecto.getLogin().trim().isEmpty()) {
+            throw new IllegalArgumentException("El login del usuario que registra el trayecto es obligatorio.");
+        }
+        Usuario usuarioRegistra = usuarioRepository.findByUsername(trayecto.getLogin().trim());
+        if (usuarioRegistra == null) {
+            throw new IllegalArgumentException("El login de usuario '" + trayecto.getLogin() + "' no existe como usuario administrativo registrado.");
+        }
+        trayecto.setLogin(trayecto.getLogin().trim());
+
+        // 1. Validar que la persona exista y sea de tipo CONDUCTOR ('C') con licencia vigente
         Long personaId = trayecto.getPersona() != null ? trayecto.getPersona().getId() : null;
         if (personaId == null) {
             throw new IllegalArgumentException("Debe especificar el ID del conductor.");
@@ -64,6 +82,9 @@ public class TrayectoService implements ITrayectoService {
 
         if (!"C".equalsIgnoreCase(conductor.getTipoPersona())) {
             throw new IllegalArgumentException("La persona asociada debe ser de tipo CONDUCTOR ('C').");
+        }
+        if (conductor.getFechaVigenciaLicencia() != null && conductor.getFechaVigenciaLicencia().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("No se puede registrar el trayecto: La licencia de conducción del conductor se encuentra vencida (" + conductor.getFechaVigenciaLicencia() + ").");
         }
         trayecto.setPersona(conductor);
 
@@ -76,15 +97,17 @@ public class TrayectoService implements ITrayectoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vehículo no encontrado con el ID: " + vehiculoId));
         trayecto.setVehiculo(vehiculo);
 
-        // 3. Regla de negocio: Verificar que TODOS los documentos del vehículo estén en estado 'Habilitado'
+        // 3. Regla de negocio: Verificar que TODOS los documentos del vehículo estén en estado 'Habilitado' y vigentes
         List<VehiculoDocumento> documentosVehiculo = vehiculoDocumentoRepository.findByVehiculoId(vehiculoId);
         if (documentosVehiculo.isEmpty()) {
             throw new IllegalArgumentException("El vehículo no tiene documentos asociados y no puede realizar trayectos.");
         }
+        LocalDate hoy = LocalDate.now();
         boolean todosHabilitados = documentosVehiculo.stream()
-                .allMatch(doc -> "Habilitado".equalsIgnoreCase(doc.getEstado()));
+                .allMatch(doc -> "Habilitado".equalsIgnoreCase(doc.getEstado())
+                        && (doc.getFechaVencimiento() == null || !doc.getFechaVencimiento().isBefore(hoy)));
         if (!todosHabilitados) {
-            throw new IllegalArgumentException("No se puede registrar el trayecto: Todos los documentos del vehículo deben estar en estado 'Habilitado'.");
+            throw new IllegalArgumentException("No se puede registrar el trayecto: Todos los documentos del vehículo deben estar vigentes y en estado 'Habilitado'.");
         }
 
         // 4. Regla de negocio: Verificar que el conductor asociado esté en estado 'PO' (Puede Operar) con dicho vehículo
@@ -96,14 +119,43 @@ public class TrayectoService implements ITrayectoService {
             throw new IllegalArgumentException("No se puede registrar el trayecto: El conductor no cuenta con estado 'PO' (Puede Operar) para este vehículo.");
         }
 
-        // 5. Validar regla de paradas: máximo 5 paradas intermedias + inicial + final = máx 7 paradas por ruta
-        long totalParadasPrevias = trayectoRepository.countByCodigoRuta(trayecto.getCodigoRuta());
-        if (totalParadasPrevias >= 7) {
-            throw new IllegalArgumentException("La ruta '" + trayecto.getCodigoRuta() + "' ya alcanzó el límite máximo de paradas permitidas (7).");
+        // 5. Validar regla de paradas: ordenParada entre 0 y 6, y máximo 5 paradas intermedias + inicial + final = máx 7 paradas por ruta
+        if (trayecto.getOrdenParada() == null || trayecto.getOrdenParada() < 0 || trayecto.getOrdenParada() > 6) {
+            throw new IllegalArgumentException("El orden de parada debe estar entre 0 (parada inicial) y 6 (máximo 7 paradas por ruta).");
+        }
+        List<Trayecto> paradasExistentes = trayectoRepository.findByCodigoRutaOrderByOrdenParadaAsc(trayecto.getCodigoRuta());
+        boolean mismoOrdenExiste = paradasExistentes.stream()
+                .anyMatch(p -> p.getOrdenParada() != null && p.getOrdenParada().equals(trayecto.getOrdenParada()));
+        if (!mismoOrdenExiste && paradasExistentes.size() >= 7) {
+            throw new IllegalArgumentException("La ruta '" + trayecto.getCodigoRuta() + "' ya alcanzó el límite máximo de paradas permitidas (7 paradas: 1 inicial, 5 intermedias y 1 final).");
         }
 
         // 6. Persistir el trayecto en la base de datos
         return trayectoRepository.save(trayecto);
+    }
+
+    // Registra un conjunto de paradas de una ruta validando que tenga mínimo 2 paradas (inicial 0 y final) y máximo 7 paradas
+    @Override
+    @Transactional
+    public List<Trayecto> crearRutaCompleta(List<Trayecto> paradas) {
+        if (paradas == null || paradas.size() < 2) {
+            throw new IllegalArgumentException("Un código de ruta debe tener mínimo 2 paradas: 1 parada inicial (orden 0) y 1 parada final.");
+        }
+        if (paradas.size() > 7) {
+            throw new IllegalArgumentException("Un código de ruta puede tener máximo 7 paradas en total (1 inicial, máximo 5 intermedias y 1 final).");
+        }
+
+        List<Trayecto> ordenadas = new ArrayList<>(paradas);
+        ordenadas.sort(Comparator.comparingInt(t -> t.getOrdenParada() != null ? t.getOrdenParada() : -1));
+        if (ordenadas.get(0).getOrdenParada() == null || ordenadas.get(0).getOrdenParada() != 0) {
+            throw new IllegalArgumentException("La ruta debe incluir obligatoriamente la parada inicial con ordenParada = 0.");
+        }
+
+        List<Trayecto> guardadas = new ArrayList<>();
+        for (Trayecto parada : ordenadas) {
+            guardadas.add(crearTrayecto(parada));
+        }
+        return guardadas;
     }
 
     // Consulta de rutas por código de ruta ordenadas secuencialmente
@@ -214,4 +266,3 @@ public class TrayectoService implements ITrayectoService {
         return trayectoRepository.findDistinctCodigosRuta();
     }
 }
-

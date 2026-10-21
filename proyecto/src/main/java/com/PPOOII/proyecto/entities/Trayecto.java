@@ -3,15 +3,18 @@ package com.PPOOII.proyecto.entities;
 
 // Importaciones de JPA y validaciones de Jakarta
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.Check;
 import java.io.Serializable;
 
 // Declaración de entidad mapeada a la tabla 'trayecto' de MySQL
 @Entity
 // Definición explícita del nombre de la tabla en base de datos
 @Table(name = "trayecto")
+@Check(constraints = "orden_parada >= 0 AND orden_parada <= 6")
 public class Trayecto implements Serializable {
 
     // Identificador de serialización para compatibilidad binaria
@@ -44,9 +47,10 @@ public class Trayecto implements Serializable {
     @Column(name = "ubicacion", nullable = false, length = 255)
     private String ubicacion;
 
-    // Orden secuencial de la parada: 0 es la inicial, el mayor es la final, intermedios son paradas
+    // Orden secuencial de la parada: 0 es la inicial, el mayor es la final, intermedios son paradas (máx 7 paradas: 0 a 6)
     @NotNull(message = "El orden de la parada es obligatorio")
     @Min(value = 0, message = "El orden de la parada no puede ser negativo")
+    @Max(value = 6, message = "El orden de la parada no puede superar 6 (máximo 7 paradas por ruta: inicial 0, hasta 5 intermedias y final)")
     @Column(name = "orden_parada", nullable = false)
     private Integer ordenParada;
 
@@ -108,4 +112,3 @@ public class Trayecto implements Serializable {
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }
 }
-

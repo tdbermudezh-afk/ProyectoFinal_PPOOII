@@ -6,8 +6,9 @@ import com.PPOOII.proyecto.entities.TrayectoTmp;
 import com.PPOOII.proyecto.repository.TrayectoTmpRepository;
 import com.PPOOII.proyecto.services.Interfaces.ITrayectoExcelService;
 
-// Importaciones de Apache POI para lectura de archivos Excel
+// Importaciones de Apache POI para lectura y escritura de archivos Excel
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 // Importaciones de utilidades Java
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,10 +46,10 @@ public class TrayectoExcelService implements ITrayectoExcelService {
         // Generar identificador de cargue numérico basado en año, mes, día, hora y minutos (ej. 202610170130)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
         String formattedDateTime = LocalDateTime.now().format(formatter);
-        Double idCargue = Double.parseDouble(formattedDateTime);
+        Long idCargue = Long.parseLong(formattedDateTime);
 
         int totalFilasLeidas = 0;
-        String usuarioEfectivo = (loginUsuario != null && !loginUsuario.isBlank()) ? loginUsuario : "SISTEMA";
+        String usuarioEfectivo = (loginUsuario != null && !loginUsuario.isBlank()) ? loginUsuario.trim() : "cg1001234567";
 
         logger.info("[CARGUE MASIVO INICIADO] idCargue: {}, Archivo: {}, Usuario: {}", idCargue, archivo.getOriginalFilename(), usuarioEfectivo);
 
@@ -72,50 +74,95 @@ public class TrayectoExcelService implements ITrayectoExcelService {
                 String ordenParada = obtenerValorCeldaComoTexto(row.getCell(4));
                 String latitud = obtenerValorCeldaComoTexto(row.getCell(5));
                 String longitud = obtenerValorCeldaComoTexto(row.getCell(6));
+                // Si la plantilla incluye columna 7 con login específico por fila, respetarla; de lo contrario usar usuarioEfectivo
+                String loginFila = obtenerValorCeldaComoTexto(row.getCell(7));
+                String loginARegistrar = (loginFila != null && !loginFila.isBlank()) ? loginFila : usuarioEfectivo;
 
                 // Si toda la fila está vacía, ignorarla
                 if (esFilaVacia(idPersona, idVehiculo, codigoRuta, ubicacion)) {
                     continue;
                 }
 
-                // Invocación del Procedimiento 1: CARGAR_TRAYECTOS_EXCEL
-                trayectoTmpRepository.CARGAR_TRAYECTOS_EXCEL(
-                        idPersona, idVehiculo, codigoRuta, ubicacion,
-                        ordenParada, latitud, longitud, usuarioEfectivo, idCargue
-                );
-                totalFilasLeidas++;
-            }
+                // Invocación del Método 1 (Procedimiento CARGAR_TRAYECTOS_EXCEL) según Laboratorio 4 Complementario
+                if (this.cargarDatosExcel(idPersona, idVehiculo, codigoRuta, ubicacion,
+                        ordenParada, latitud, longitud, loginARegistrar, idCargue)) { // Verifica si el cargue de la fila fue exitoso
+                    totalFilasLeidas++; // Incrementa el contador de filas cargadas
+                } // Fin de invocación de cargarDatosExcel
+            } // Fin del ciclo for sobre las filas del Excel
 
-            logger.info("[FASE 1 COMPLETADA] Filas cargadas en trayecto_tmp: {}", totalFilasLeidas);
+            logger.info("[FASE 1 COMPLETADA] Filas cargadas en trayecto_tmp: {}", totalFilasLeidas); // Log de fase 1
 
-            // FASE 2: Invocación del Procedimiento 2: VALIDAR_TRAYECTOS_CARGUE
-            logger.info("[FASE 2 INICIADA] Ejecutando procedimiento VALIDAR_TRAYECTOS_CARGUE para idCargue: {}", idCargue);
-            trayectoTmpRepository.VALIDAR_TRAYECTOS_CARGUE(idCargue);
+            // FASE 2 y FASE 3 encadenadas mediante métodos booleanos según Laboratorio 4 Complementario (pág. 9)
+            if (this.validarDatosExcel(idCargue)) { // Ejecuta y verifica el procedimiento de validación de reglas de negocio
+                logger.info("Validación de datos cargados. EXITOSO!!!!!"); // Mensaje de éxito de validación
+                if (this.procesarDatosExcel(idCargue)) { // Ejecuta y verifica el procedimiento de procesado a tabla transaccional
+                    logger.info("Procesado de datos validados. EXITOSO!!!!!"); // Mensaje de éxito de procesado
+                } // Fin de procesarDatosExcel
+            } // Fin de validarDatosExcel
 
-            // FASE 3: Invocación del Procedimiento 3: PROCESAR_TRAYECTOS_EXCEL
-            logger.info("[FASE 3 INICIADA] Ejecutando procedimiento PROCESAR_TRAYECTOS_EXCEL para idCargue: {}", idCargue);
-            trayectoTmpRepository.PROCESAR_TRAYECTOS_EXCEL(idCargue);
-
-        } catch (Exception e) {
-            logger.error("[ERROR EN PROCESAMIENTO EXCEL] idCargue: {}, Causa: {}", idCargue, e.getMessage());
-            throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e);
-        }
+        } catch (Exception e) { // Captura cualquier excepción en la lectura del archivo Excel
+            logger.error("[ERROR EN PROCESAMIENTO EXCEL] idCargue: {}, Causa: {}", idCargue, e.getMessage()); // Registra el error
+            throw new RuntimeException("Error al procesar el archivo Excel: " + e.getMessage(), e); // Propaga la excepción
+        } // Fin del bloque try-catch
 
         // Construir balance final del cargue masivo
-        return obtenerResumenCargue(idCargue);
-    }
+        return obtenerResumenCargue(idCargue); // Retorna el mapa con las estadísticas y registros del cargue
+    } // Fin del método procesarCargueExcel
+
+    // Implementación del método 1 del Laboratorio 4 Complementario: Invoca el procedimiento CARGAR_TRAYECTOS_EXCEL
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean cargarDatosExcel(String idPersona, String idVehiculo, String codigoRuta, String ubicacion,
+                                    String ordenParada, String latitud, String longitud, String loginUsuario, Long idCargue) { // Parámetros de la fila Excel
+        try { // Bloque try para controlar la invocación del procedimiento almacenado
+            trayectoTmpRepository.CARGAR_TRAYECTOS_EXCEL(
+                    idPersona, idVehiculo, codigoRuta, ubicacion,
+                    ordenParada, latitud, longitud, loginUsuario, idCargue
+            ); // Llama al procedimiento almacenado en MySQL
+            logger.info("Se carga registro de excel a tabla temporal de forma exitosa!!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores en la invocación del procedimiento
+            logger.error("ERROR CARGAR DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método cargarDatosExcel
+
+    // Implementación del método 2 del Laboratorio 4 Complementario: Invoca el procedimiento VALIDAR_TRAYECTOS_CARGUE
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean validarDatosExcel(Long idCargue) { // Recibe el identificador único del lote de cargue
+        try { // Bloque try para controlar la invocación del procedimiento de validación
+            trayectoTmpRepository.VALIDAR_TRAYECTOS_CARGUE(idCargue); // Llama al procedimiento almacenado VALIDAR_TRAYECTOS_CARGUE
+            logger.info("Se valida registro de excel en tabla temporal de forma exitosa!!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores durante la validación en base de datos
+            logger.error("ERROR VALIDANDO DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método validarDatosExcel
+
+    // Implementación del método 3 del Laboratorio 4 Complementario: Invoca el procedimiento PROCESAR_TRAYECTOS_EXCEL
+    @Override // Sobrescribe el método definido en ITrayectoExcelService
+    public boolean procesarDatosExcel(Long idCargue) { // Recibe el identificador único del lote de cargue
+        try { // Bloque try para controlar la invocación del procedimiento de procesado
+            trayectoTmpRepository.PROCESAR_TRAYECTOS_EXCEL(idCargue); // Llama al procedimiento almacenado PROCESAR_TRAYECTOS_EXCEL
+            logger.info("Se procesan los datos validados de forma exitosa y se trasladan a la tabla transaccional!!!"); // Log de confirmación
+            return true; // Retorna verdadero indicando éxito
+        } catch (Exception e) { // Captura errores durante el traslado a la tabla transaccional
+            logger.error("ERROR PROCESAR DATOS DE ARCHIVO EXCEL: PROBLEMAS CON LA INVOCACIÓN DEL PROCEDIMIENTO ALMACENADO: {}", e.getMessage()); // Log de error
+            return false; // Retorna falso en caso de fallo
+        } // Fin del bloque try-catch
+    } // Fin del método procesarDatosExcel
 
     // Consulta de los registros de un cargue específico
     @Override
     @Transactional(readOnly = true)
-    public List<TrayectoTmp> consultarPorIdCargue(Double idCargue) {
+    public List<TrayectoTmp> consultarPorIdCargue(Long idCargue) {
         return trayectoTmpRepository.findByIdCargueOrderByIdAsc(idCargue);
     }
 
     // Consulta consolidada del resultado de un cargue
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> obtenerResumenCargue(Double idCargue) {
+    public Map<String, Object> obtenerResumenCargue(Long idCargue) {
         List<TrayectoTmp> registros = trayectoTmpRepository.findByIdCargueOrderByIdAsc(idCargue);
 
         long procesados = registros.stream().filter(r -> "PROCESADO".equalsIgnoreCase(r.getEstado())).count();
@@ -134,6 +181,47 @@ public class TrayectoExcelService implements ITrayectoExcelService {
         resumen.put("detalleRegistros", registros);
 
         return resumen;
+    }
+
+    // Genera en memoria una plantilla Excel (.xlsx) de ejemplo con casos válidos e inválidos
+    @Override
+    public byte[] generarPlantillaExcelEjemplo() {
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Trayectos_Ibague");
+            Row header = sheet.createRow(0);
+            String[] columnas = {"ID_PERSONA_O_CEDULA", "ID_VEHICULO_O_PLACA", "CODIGO_RUTA", "UBICACION", "ORDEN_PARADA", "LATITUD", "LONGITUD"};
+            for (int i = 0; i < columnas.length; i++) {
+                header.createCell(i).setCellValue(columnas[i]);
+            }
+
+            String[][] filas = {
+                {"1010203040", "ABC123", "RUTA-CENTRO-IBG", "Plaza de Bolívar, Ibagué, Tolima", "0", "4.4447", "-75.2424"},
+                {"1010203040", "ABC123", "RUTA-CENTRO-IBG", "Conservatorio del Tolima, Ibagué, Tolima", "1", "4.4439", "-75.2412"},
+                {"1010203040", "ABC123", "RUTA-CENTRO-IBG", "Parque Murillo Toro, Ibagué, Tolima", "2", "4.4432", "-75.2398"},
+                {"1020304050", "XYZ789", "RUTA-ERR-DOC", "Terminal de Transportes de Ibagué, Tolima", "0", "4.4395", "-75.2320"},
+                {"1001234567", "ABC123", "RUTA-ERR-ADMIN", "Universidad del Tolima, Ibagué, Tolima", "0", "4.4275", "-75.2145"}
+            };
+
+            for (int r = 0; r < filas.length; r++) {
+                Row row = sheet.createRow(r + 1);
+                for (int c = 0; c < filas[r].length; c++) {
+                    row.createCell(c).setCellValue(filas[r][c]);
+                }
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("No fue posible generar la plantilla Excel: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> listarLotesCargue() {
+        return trayectoTmpRepository.findDistinctIdCargueDesc();
     }
 
     // Utilidad interna: Convierte el valor de cualquier celda de Excel a cadena de texto limpia
@@ -181,4 +269,3 @@ public class TrayectoExcelService implements ITrayectoExcelService {
         return true;
     }
 }
-
